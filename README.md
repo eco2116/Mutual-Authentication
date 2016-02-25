@@ -17,8 +17,16 @@ java -Djavax.net.ssl.keyStore=client.jks -Djavax.net.ssl.keyStorePassword=passwo
 
 GENERATE SERVER CERTIFICATE
 
-keytool -genkeypair -keystore server.jks -storepass password -alias server -keypass password
+keytool -genkeypair -keystore server.jks -storepass password -alias server -keypass password -keyalg RSA
 
 GENERATE CLIENT CERTIFICATE
 
-keytool -genkeypair -keystore client.jks -storepass password -alias client -keypass password
+keytool -genkeypair -keystore client.jks -storepass password -alias client -keypass password -keyalg RSA
+
+Notes:
+
+from : http://docs.oracle.com/javase/7/docs/technotes/tools/solaris/keytool.html
+
+need to use rsa & sha-256
+
+If the underlying private key is of type "RSA", the -sigalg option defaults to "SHA256withRSA".
