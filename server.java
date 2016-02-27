@@ -37,10 +37,28 @@ public class server {
                 // Check for existence of requested file and its hash
                 if(!file.exists() || !file.canRead() || !hash.exists() || !hash.canRead()) {
                     objectOutputStream.writeObject(new ErrorMessage(
-                            new GetMessage.GetFileNotFoundException("File cannot be retrieved.")));
+                            new GetMessage.GetFileNotFoundException()));
                 } else {
                   objectOutputStream.writeObject(new GetMessage(fileName, file, hash));
                 }
+            } else if(cmd.getType() == Message.MessageType.PUT) {
+                PutMessage putMessage = (PutMessage) cmd;
+                File file = putMessage.getFile();
+                String fileName = putMessage.getFileName();
+
+                byte[] fileArray = new byte[(int) file.length()];
+                FileInputStream fileInputStream = new FileInputStream(file);
+                fileInputStream.read(fileArray);
+                fileInputStream.close();
+                FileOutputStream fileOutputStream = new FileOutputStream(fileName+ "-server");
+                fileOutputStream.write(fileArray);
+                fileOutputStream.close();
+
+                // Write hash to disk
+                byte[] hash = putMessage.getHashArray();
+                fileOutputStream = new FileOutputStream(fileName + "-server.sha256");
+                fileOutputStream.write(hash);
+
             }
 
             connection.close();

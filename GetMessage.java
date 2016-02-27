@@ -24,9 +24,13 @@ public class GetMessage extends Message {
         return this.fileName;
     }
 
+    public File getFile() { return this.file; }
+
+    public File getHash() { return this.hash; }
+
     public static class GetFileNotFoundException extends Exception {
-        GetFileNotFoundException(String msg) {
-            super("Get request failed: " + msg);
+        GetFileNotFoundException() {
+            super("Get request failed: Could not access file.");
         }
     }
 }

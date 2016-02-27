@@ -1,7 +1,11 @@
+
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
 import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Scanner;
 
 /**
@@ -14,7 +18,7 @@ public class client {
 
     private static final int PASSWORD_LENGTH = 8;
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
+    public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
         SocketFactory sslFactory = SSLSocketFactory.getDefault();
         Socket connection = sslFactory.createSocket("localhost", 1234);
         OutputStream out = connection.getOutputStream();
@@ -52,11 +56,11 @@ public class client {
                     } else if(splitCmd[2].equals("E")) {
                         if (splitCmd.length > 4) {
                             System.out.println("Too many parameters for request with encryption.");
-                            System.out.println("Only filename, \"\"E\" or \"N\", and password required.");
+                            System.out.println("Only filename, \"E\" or \"N\", and password required.");
                             continue;
                         } else if (splitCmd.length < 4) {
                             System.out.println("Missing parameters for request with encryption.");
-                            System.out.println("Filename, \"\"E\" or \"N\", and password required.");
+                            System.out.println("Filename, \"E\" or \"N\", and password required.");
                             continue;
                         } else {
                             if (splitCmd[3].length() != PASSWORD_LENGTH) {
@@ -72,7 +76,7 @@ public class client {
                     } else if(splitCmd[2].equals("N")) {
                         if(splitCmd.length > 3) {
                             System.out.println("Too many parameters for request without encryption.");
-                            System.out.println("Only filename and \"\"E\" or \"N\".");
+                            System.out.println("Only filename and \"E\" or \"N\".");
                             continue;
                         } else {
                             if(splitCmd[0].equals("get")) {
@@ -84,17 +88,48 @@ public class client {
                                 } else if(message.getType() == Message.MessageType.GET) {
                                     GetMessage getMessage = (GetMessage) message;
                                     System.out.println("Get received " + getMessage.getFileName());
-                                    continue;
+                                    byte[] clientHash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, getMessage.getFile());
+
+                                    File hashFile = getMessage.getHash();
+                                    byte[] serverHash = new byte[(int) getMessage.getHash().length()];
+                                    FileInputStream fileInputStream = new FileInputStream(hashFile);
+                                    fileInputStream.read(serverHash);
+                                    fileInputStream.close();
+
+                                    if(!Arrays.equals(clientHash, serverHash)) {
+                                        System.out.println("Calculated hash did not match hash server sent.");
+                                    } else {
+
+                                        byte[] writeFile = new byte[(int) getMessage.getFile().length()];
+                                        fileInputStream = new FileInputStream(getMessage.getFile());
+                                        fileInputStream.read(writeFile);
+                                        fileInputStream.close();
+
+                                        FileOutputStream fileOutputStream = new FileOutputStream(getMessage.getFileName());
+                                        fileOutputStream.write(writeFile);
+                                        fileOutputStream.close();
+                                        System.out.println("Wrote new file ");
+
+                                    }
                                 } else {
                                     System.out.println("Did not understand message from server.");
                                 }
 
                             } else {
-                                objectOutputStream.writeObject(new PutMessage(splitCmd[1]));
+                                File file = new File(splitCmd[1]);
+                                if(!file.exists() || !file.canRead()) {
+                                    System.out.println("Failed to access file: " + splitCmd[1]);
+                                    objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
+                                    continue;
+                                } else {
+                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, file);
+                                    objectOutputStream.writeObject(new PutMessage(file.getName(), file, hash));
+                                    System.out.println("sent a put request");
+                                }
                             }
                         }
                     } else {
-                        System.out.println("Second parameter for get request must be \"\"E\" or \"N\"");
+                        System.out.println("Second parameter for get request must be \"E\" or \"N\"");
                         continue;
                     }
                 } else {
