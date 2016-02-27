@@ -1,5 +1,4 @@
 import javax.net.SocketFactory;
-import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
 import java.net.Socket;
@@ -15,13 +14,14 @@ public class client {
 
     private static final int PASSWORD_LENGTH = 8;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
         SocketFactory sslFactory = SSLSocketFactory.getDefault();
         Socket connection = sslFactory.createSocket("localhost", 1234);
         OutputStream out = connection.getOutputStream();
         InputStream in = connection.getInputStream();
 
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(connection.getOutputStream());
+        ObjectInputStream objectInputStream = new ObjectInputStream(connection.getInputStream());
 
         Scanner input = new Scanner(System.in);
         while(true) {
@@ -35,7 +35,7 @@ public class client {
                 // Stop
                 if(splitCmd[0].equals("stop")) {
                     if(splitCmd.length == 1) {
-                        objectOutputStream.writeObject(new StopRequest());
+                        objectOutputStream.writeObject(new StopMessage());
                         System.out.println("Goodbye!");
                         break;
                     } else {
@@ -63,9 +63,9 @@ public class client {
                                 System.out.println("Password must be 8 characters long.");
                                 continue;
                             } else if (splitCmd[0].equals("get")){
-                                objectOutputStream.writeObject(new GetRequest(true, splitCmd[1]));
+                                objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
                             } else {
-                                objectOutputStream.writeObject(new PutRequest(true, splitCmd[1]));
+                                objectOutputStream.writeObject(new PutMessage(splitCmd[1]));
                             }
                         }
                     // without encryption
@@ -76,9 +76,11 @@ public class client {
                             continue;
                         } else {
                             if(splitCmd[0].equals("get")) {
-                                objectOutputStream.writeObject(new GetRequest(false, splitCmd[1]));
+                                objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
+                                GetMessage getMessage = (GetMessage) objectInputStream.readObject();
+                                
                             } else {
-                                objectOutputStream.writeObject(new PutRequest(false, splitCmd[1]));
+                                objectOutputStream.writeObject(new PutMessage(splitCmd[1]));
                             }
                         }
                     } else {
