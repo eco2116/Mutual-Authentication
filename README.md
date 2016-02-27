@@ -1,7 +1,7 @@
 Evan O'Connor (eco2116)
 
 
-http://stilius.net/java/java_ssl.php (TLS sockets)
+http://stilius.net/java/java_ssl.php (TLS sockets) -- not used right now
 
 http://commandlinefanatic.com/cgi-bin/showarticle.cgi?article=art042 (2-way)
 
