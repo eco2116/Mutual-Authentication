@@ -77,8 +77,18 @@ public class client {
                         } else {
                             if(splitCmd[0].equals("get")) {
                                 objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
-                                GetMessage getMessage = (GetMessage) objectInputStream.readObject();
-                                
+                                Message message = (Message) objectInputStream.readObject();
+                                if(message.getType() == Message.MessageType.ERROR) {
+                                    System.out.println(((ErrorMessage) message).getException().getMessage());
+                                    continue;
+                                } else if(message.getType() == Message.MessageType.GET) {
+                                    GetMessage getMessage = (GetMessage) message;
+                                    System.out.println("Get received " + getMessage.getFileName());
+                                    continue;
+                                } else {
+                                    System.out.println("Did not understand message from server.");
+                                }
+
                             } else {
                                 objectOutputStream.writeObject(new PutMessage(splitCmd[1]));
                             }

@@ -8,4 +8,8 @@ public class ErrorMessage extends Message {
         this.exception = exception;
     }
 
+    public Exception getException() {
+        return this.exception;
+    }
+
 }
