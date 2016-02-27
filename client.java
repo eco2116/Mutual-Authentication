@@ -13,6 +13,8 @@ import java.util.Scanner;
 
 public class client {
 
+    private static final int PASSWORD_LENGTH = 8;
+
     public static void main(String[] args) throws IOException {
         SocketFactory sslFactory = SSLSocketFactory.getDefault();
         Socket connection = sslFactory.createSocket("localhost", 1234);
@@ -28,25 +30,67 @@ public class client {
             String[] splitCmd = userCmd.split(" ");
             if(splitCmd.length == 0) {
                 System.out.println("Please enter a command.");
-                continue;
-            } else if(splitCmd.length == 1) {
-                if(!splitCmd[0].equals("stop")) {
-                    System.out.println("Did not understand that command.");
+            } else {
+
+                // Stop
+                if(splitCmd[0].equals("stop")) {
+                    if(splitCmd.length == 1) {
+                        objectOutputStream.writeObject(new StopRequest());
+                        System.out.println("Goodbye!");
+                        break;
+                    } else {
+                        System.out.println("\"stop\" does not accept parameters. Try again.");
+                        continue;
+                    }
+
+                } else if(splitCmd[0].equals("get") || splitCmd[0].equals("put")) {
+                    if(splitCmd.length < 3) {
+                        System.out.println("Missing parameters. Minimum of filename and \"E\" or \"N\" required.");
+                        continue;
+
+                    // with encryption
+                    } else if(splitCmd[2].equals("E")) {
+                        if (splitCmd.length > 4) {
+                            System.out.println("Too many parameters for request with encryption.");
+                            System.out.println("Only filename, \"\"E\" or \"N\", and password required.");
+                            continue;
+                        } else if (splitCmd.length < 4) {
+                            System.out.println("Missing parameters for request with encryption.");
+                            System.out.println("Filename, \"\"E\" or \"N\", and password required.");
+                            continue;
+                        } else {
+                            if (splitCmd[3].length() != PASSWORD_LENGTH) {
+                                System.out.println("Password must be 8 characters long.");
+                                continue;
+                            } else if (splitCmd[0].equals("get")){
+                                objectOutputStream.writeObject(new GetRequest(true, splitCmd[1]));
+                            } else {
+                                objectOutputStream.writeObject(new PutRequest(true, splitCmd[1]));
+                            }
+                        }
+                    // without encryption
+                    } else if(splitCmd[2].equals("N")) {
+                        if(splitCmd.length > 3) {
+                            System.out.println("Too many parameters for request without encryption.");
+                            System.out.println("Only filename and \"\"E\" or \"N\".");
+                            continue;
+                        } else {
+                            if(splitCmd[0].equals("get")) {
+                                objectOutputStream.writeObject(new GetRequest(false, splitCmd[1]));
+                            } else {
+                                objectOutputStream.writeObject(new PutRequest(false, splitCmd[1]));
+                            }
+                        }
+                    } else {
+                        System.out.println("Second parameter for get request must be \"\"E\" or \"N\"");
+                        continue;
+                    }
                 } else {
-                    objectOutputStream.writeObject(new StopRequest());
-                    System.out.println("Goodbye!");
-                    break;
+                    System.out.println("Invalid command: " + splitCmd[0] + ". Expected \"stop\", \"put\", or \"get\".");
                 }
             }
 
         }
-
-//        out.write("abc".getBytes());
-//
-//        int c;
-//        while((c = in.read()) != -1) {
-//            System.out.print((char) c);
-//        }
         in.close();
         out.close();
         connection.close();

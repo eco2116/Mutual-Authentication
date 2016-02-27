@@ -21,23 +21,17 @@ public class server {
 
         Socket connection = null;
         while ((connection = listenSocket.accept()) != null) {
-            InputStream in = connection.getInputStream();
-            OutputStream out = connection.getOutputStream();
+
 
             ObjectInputStream objectInputStream = new ObjectInputStream(connection.getInputStream());
             Request cmd = (Request) objectInputStream.readObject();
             if(cmd.getType() == Request.RequestType.STOP) {
                 System.out.println("Received a stop request from client. Exiting...");
+                connection.close();
+                // TODO: close stuff
                 break;
             }
 
-//            int c;
-//            while ((c = in.read()) != -1) {
-//                out.write(c);
-//            }
-
-            out.close();
-            in.close();
             connection.close();
         }
 
