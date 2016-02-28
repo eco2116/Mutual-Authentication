@@ -17,11 +17,13 @@ java -Djavax.net.ssl.keyStore=client.jks -Djavax.net.ssl.keyStorePassword=passwo
 
 GENERATE SERVER CERTIFICATE
 
-keytool -genkeypair -keystore server.jks -storepass password -alias server -keypass password -keyalg RSA
+keytool -genkeypair -keystore server.jks -storepass password -alias server -keypass password -keyalg RSA \
+-sigalg SHA256withRSA
 
 GENERATE CLIENT CERTIFICATE
 
-keytool -genkeypair -keystore client.jks -storepass password -alias client -keypass password -keyalg RSA
+keytool -genkeypair -keystore client.jks -storepass password -alias client -keypass password -keyalg RSA \
+-sigalg SHA256withRSA
 
 Notes:
 

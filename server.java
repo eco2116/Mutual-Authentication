@@ -16,6 +16,7 @@ public class server {
 
         System.setProperty("javax.net.debug", "all");
 
+        // TODO: figure out if its okay to have client.jks here - trust store? accepted certificates?
         System.setProperty("javax.net.ssl.trustStore", "client.jks");
         System.setProperty("javax.net.ssl.trustStorePassword", "password"); // TODO: better password?
         System.setProperty("javax.net.ssl.keyStore", "server.jks");
