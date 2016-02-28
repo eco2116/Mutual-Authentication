@@ -49,24 +49,28 @@ public class server {
 
                 // Check for existence of requested file and its hash
                 if(!file.exists() || !file.canRead() || !hash.exists() || !hash.canRead()) {
+                    System.out.println("server file access error.");
                     objectOutputStream.writeObject(new ErrorMessage(
                             new GetMessage.GetFileNotFoundException()));
                 } else {
-                  objectOutputStream.writeObject(new GetMessage(fileName, file, hash));
+                    System.out.println("writing get to client.");
+                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
+                    byte[] hashBytes = Crypto.extractBytesFromFile(hash);
+                    objectOutputStream.writeObject(new GetMessage(fileName, fileBytes, hashBytes));
                 }
             } else if(cmd.getType() == Message.MessageType.PUT) {
                 PutMessage putMessage = (PutMessage) cmd;
 
                 String fileName = putMessage.getFileName();
 
-                byte[] fileArray = putMessage.getFileArray();
+                byte[] fileArray = putMessage.getFileBytes();
 
                 FileOutputStream fileOutputStream = new FileOutputStream(fileName);
                 fileOutputStream.write(fileArray);
                 fileOutputStream.close();
 
                 // Write hash to disk
-                byte[] hash = putMessage.getHashArray();
+                byte[] hash = putMessage.getHashBytes();
                 fileOutputStream = new FileOutputStream(fileName + HASH_EXTENSION);
                 fileOutputStream.write(hash);
                 fileOutputStream.close();

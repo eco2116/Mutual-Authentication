@@ -3,30 +3,30 @@ import java.io.File;
 public class GetMessage extends Message {
 
     private final String fileName;
-    private final File file;
-    private final File hash;
+    private final byte[] fileBytes;
+    private final byte[] hashBytes;
 
     public GetMessage(String fileName) {
         super(MessageType.GET);
         this.fileName = fileName;
-        this.file = null;
-        this.hash = null;
+        this.fileBytes = null;
+        this.hashBytes = null;
     }
 
-    public GetMessage(String fileName, File file, File hash) {
+    public GetMessage(String fileName, byte[] fileBytes, byte[] hashBytes) {
         super(MessageType.GET);
         this.fileName = fileName;
-        this.file = file;
-        this.hash = hash;
+        this.fileBytes = fileBytes;
+        this.hashBytes = hashBytes;
     }
 
     public String getFileName() {
         return this.fileName;
     }
 
-    public File getFile() { return this.file; }
+    public byte[] getFileBytes() { return this.fileBytes; }
 
-    public File getHash() { return this.hash; }
+    public byte[] getHashBytes() { return this.hashBytes; }
 
     public static class GetFileNotFoundException extends Exception {
         GetFileNotFoundException() {

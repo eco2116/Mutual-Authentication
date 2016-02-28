@@ -97,25 +97,21 @@ public class client {
                                 } else if(message.getType() == Message.MessageType.GET) {
                                     GetMessage getMessage = (GetMessage) message;
                                     System.out.println("Get received " + getMessage.getFileName());
-                                    byte[] clientHash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, getMessage.getFile());
-
-                                    File hashFile = getMessage.getHash();
-                                    byte[] serverHash = new byte[(int) getMessage.getHash().length()];
-                                    FileInputStream fileInputStream = new FileInputStream(hashFile);
-                                    fileInputStream.read(serverHash);
-                                    fileInputStream.close();
+                                    byte[] fileBytes = getMessage.getFileBytes();
+                                    byte[] clientHash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, fileBytes);
+                                    byte[] serverHash = getMessage.getHashBytes();
 
                                     if(!Arrays.equals(clientHash, serverHash)) {
                                         System.out.println("Calculated hash did not match hash server sent.");
                                     } else {
 
-                                        byte[] writeFile = new byte[(int) getMessage.getFile().length()];
-                                        fileInputStream = new FileInputStream(getMessage.getFile());
-                                        fileInputStream.read(writeFile);
-                                        fileInputStream.close();
+//                                        byte[] writeFile = new byte[(int) getMessage.getFile().length()];
+//                                        fileInputStream = new FileInputStream(getMessage.getFile());
+//                                        fileInputStream.read(writeFile);
+//                                        fileInputStream.close();
 
                                         FileOutputStream fileOutputStream = new FileOutputStream(getMessage.getFileName());
-                                        fileOutputStream.write(writeFile);
+                                        fileOutputStream.write(fileBytes);
                                         fileOutputStream.close();
                                         System.out.println("Wrote new file ");
 
@@ -132,8 +128,8 @@ public class client {
                                     objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
                                     continue;
                                 } else {
-                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, file);
-                                    byte[] fileBytes = extractBytesFromFile(file);
+                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, Crypto.extractBytesFromFile(file));
+                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
                                     objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
                                     System.out.println("sent a put request");
                                 }
@@ -154,27 +150,4 @@ public class client {
         connection.close();
     }
 
-    private static byte[] extractBytesFromFile(File file) throws IOException {
-        InputStream inputStream = new FileInputStream(file);
-
-        long length = file.length();
-        if(length > Integer.MAX_VALUE) {
-            // TODO: File is too large - throw put exception
-        }
-
-        byte[] fileBytes = new byte[(int) length];
-
-        int offset = 0;
-        int read = 0;
-        while(offset < fileBytes.length &&
-                (read = inputStream.read(fileBytes, offset, fileBytes.length - offset)) >= 0) {
-            offset += read;
-        }
-        if(offset < fileBytes.length) {
-            // TODO - put exception
-            throw new IOException("Failed to completely read file " + file.getName());
-        }
-        inputStream.close();
-        return fileBytes;
-    }
 }
