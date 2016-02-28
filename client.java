@@ -20,6 +20,12 @@ public class client {
     private static final int PASSWORD_LENGTH = 8;
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
+        
+        System.setProperty("javax.net.ssl.keyStore", "client.jks");
+        System.setProperty("javax.net.ssl.keyStorePassword", "password"); // TODO: better password?
+        System.setProperty("javax.net.ssl.trustStore", "server.jks");
+        System.setProperty("javax.net.ssl.trustStorePassword", "password");
+
         SocketFactory sslFactory = SSLSocketFactory.getDefault();
         Socket connection = sslFactory.createSocket(InetAddress.getByName(args[0]), 1234);
         OutputStream out = connection.getOutputStream();

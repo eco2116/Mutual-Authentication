@@ -14,8 +14,13 @@ public class server {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-        System.setProperty("javax.net.ssl.trustStore", "server.jks");
-        System.setProperty("javax.net.debug", "ssl");
+        System.setProperty("javax.net.ssl.trustStore", "client.jks");
+        System.setProperty("javax.net.ssl.trustStorePassword", "password"); // TODO: better password?
+        System.setProperty("javax.net.ssl.keyStore", "server.jks");
+        System.setProperty("javax.net.ssl.keyStorePassword" , "password");
+
+//        System.setProperty("javax.net.ssl.trustStore", "server.jks");
+//        System.setProperty("javax.net.debug", "ssl");
         ServerSocketFactory sslFactory = SSLServerSocketFactory.getDefault();
         ServerSocket listenSocket = sslFactory.createServerSocket(1234);
         ((SSLServerSocket)listenSocket).setNeedClientAuth(true);
