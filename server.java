@@ -14,6 +14,8 @@ public class server {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
+        System.setProperty("javax.net.debug", "all");
+
         System.setProperty("javax.net.ssl.trustStore", "client.jks");
         System.setProperty("javax.net.ssl.trustStorePassword", "password"); // TODO: better password?
         System.setProperty("javax.net.ssl.keyStore", "server.jks");
@@ -66,9 +68,7 @@ public class server {
                 byte[] hash = putMessage.getHashArray();
                 fileOutputStream = new FileOutputStream(fileName);
                 fileOutputStream.write(hash);
-
             }
-
             connection.close();
         }
 

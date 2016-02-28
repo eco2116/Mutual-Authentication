@@ -20,7 +20,9 @@ public class client {
     private static final int PASSWORD_LENGTH = 8;
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
-        
+
+        System.setProperty("javax.net.debug", "all");
+
         System.setProperty("javax.net.ssl.keyStore", "client.jks");
         System.setProperty("javax.net.ssl.keyStorePassword", "password"); // TODO: better password?
         System.setProperty("javax.net.ssl.trustStore", "server.jks");
