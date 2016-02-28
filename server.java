@@ -14,7 +14,7 @@ public class server {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-        System.setProperty("javax.net.debug", "all");
+        //System.setProperty("javax.net.debug", "all");
 
         // TODO: figure out if its okay to have client.jks here - trust store? accepted certificates?
         System.setProperty("javax.net.ssl.trustStore", "client.jks");

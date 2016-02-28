@@ -21,7 +21,7 @@ public class client {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
 
-        System.setProperty("javax.net.debug", "all");
+        //System.setProperty("javax.net.debug", "all");
 
         System.setProperty("javax.net.ssl.keyStore", "client.jks");
         System.setProperty("javax.net.ssl.keyStorePassword", "password"); // TODO: better password?
