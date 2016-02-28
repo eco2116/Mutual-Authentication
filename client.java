@@ -2,6 +2,7 @@
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -20,7 +21,7 @@ public class client {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
         SocketFactory sslFactory = SSLSocketFactory.getDefault();
-        Socket connection = sslFactory.createSocket(args[0], 1234);
+        Socket connection = sslFactory.createSocket(InetAddress.getByName(args[0]), 1234);
         OutputStream out = connection.getOutputStream();
         InputStream in = connection.getInputStream();
 
