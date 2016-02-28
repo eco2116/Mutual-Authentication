@@ -12,6 +12,8 @@ import java.net.Socket;
  */
 public class server {
 
+    private static final String HASH_EXTENSION = ".sha256";
+
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
         //System.setProperty("javax.net.debug", "all");
@@ -43,7 +45,7 @@ public class server {
             } else if(cmd.getType() == Message.MessageType.GET) {
                 String fileName = ((GetMessage) cmd).getFileName();
                 File file = new File(fileName);
-                File hash = new File(file.getPath() + ".sha256");
+                File hash = new File(file.getPath() + HASH_EXTENSION);
 
                 // Check for existence of requested file and its hash
                 if(!file.exists() || !file.canRead() || !hash.exists() || !hash.canRead()) {
@@ -58,14 +60,14 @@ public class server {
                 String fileName = putMessage.getFileName();
 
                 byte[] fileArray = putMessage.getFileArray();
-                
+
                 FileOutputStream fileOutputStream = new FileOutputStream(fileName);
                 fileOutputStream.write(fileArray);
                 fileOutputStream.close();
 
                 // Write hash to disk
                 byte[] hash = putMessage.getHashArray();
-                fileOutputStream = new FileOutputStream(fileName);
+                fileOutputStream = new FileOutputStream(fileName + HASH_EXTENSION);
                 fileOutputStream.write(hash);
             }
             connection.close();
