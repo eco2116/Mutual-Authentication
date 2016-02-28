@@ -104,12 +104,6 @@ public class client {
                                     if(!Arrays.equals(clientHash, serverHash)) {
                                         System.out.println("Calculated hash did not match hash server sent.");
                                     } else {
-
-//                                        byte[] writeFile = new byte[(int) getMessage.getFile().length()];
-//                                        fileInputStream = new FileInputStream(getMessage.getFile());
-//                                        fileInputStream.read(writeFile);
-//                                        fileInputStream.close();
-
                                         FileOutputStream fileOutputStream = new FileOutputStream(getMessage.getFileName());
                                         fileOutputStream.write(fileBytes);
                                         fileOutputStream.close();

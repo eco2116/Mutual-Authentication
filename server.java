@@ -24,57 +24,60 @@ public class server {
         System.setProperty("javax.net.ssl.keyStore", "server.jks");
         System.setProperty("javax.net.ssl.keyStorePassword" , "password");
 
-//        System.setProperty("javax.net.ssl.trustStore", "server.jks");
-//        System.setProperty("javax.net.debug", "ssl");
         ServerSocketFactory sslFactory = SSLServerSocketFactory.getDefault();
         ServerSocket listenSocket = sslFactory.createServerSocket(1234);
         ((SSLServerSocket)listenSocket).setNeedClientAuth(true);
 
         Socket connection = null;
         while ((connection = listenSocket.accept()) != null) {
+            //while(true) {
+                ObjectInputStream objectInputStream = new ObjectInputStream(connection.getInputStream());
+                ObjectOutputStream objectOutputStream = new ObjectOutputStream(connection.getOutputStream());
+            while(true) {
+                Message cmd = (Message) objectInputStream.readObject();
+                if (cmd.getType() == Message.MessageType.STOP) {
+                    System.out.println("Received a stop request from client. Exiting...");
+                    connection.close();
+                    // TODO: close stuff
+                    break;
+                } else if (cmd.getType() == Message.MessageType.GET) {
+                    String fileName = ((GetMessage) cmd).getFileName();
+                    File file = new File(fileName);
+                    File hash = new File(file.getPath() + HASH_EXTENSION);
 
-            ObjectInputStream objectInputStream = new ObjectInputStream(connection.getInputStream());
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(connection.getOutputStream());
+                    // Check for existence of requested file and its hash
+                    if (!file.exists() || !file.canRead() || !hash.exists() || !hash.canRead()) {
+                        System.out.println("server file access error.");
+                        objectOutputStream.writeObject(new ErrorMessage(
+                                new GetMessage.GetFileNotFoundException()));
+                    } else {
+                        System.out.println("writing get to client.");
+                        byte[] fileBytes = Crypto.extractBytesFromFile(file);
+                        byte[] hashBytes = Crypto.extractBytesFromFile(hash);
+                        objectOutputStream.writeObject(new GetMessage(fileName, fileBytes, hashBytes));
+                    }
+                } else if (cmd.getType() == Message.MessageType.PUT) {
+                    PutMessage putMessage = (PutMessage) cmd;
 
-            Message cmd = (Message) objectInputStream.readObject();
-            if(cmd.getType() == Message.MessageType.STOP) {
-                System.out.println("Received a stop request from client. Exiting...");
-                connection.close();
-                // TODO: close stuff
-                break;
-            } else if(cmd.getType() == Message.MessageType.GET) {
-                String fileName = ((GetMessage) cmd).getFileName();
-                File file = new File(fileName);
-                File hash = new File(file.getPath() + HASH_EXTENSION);
+                    String fileName = putMessage.getFileName();
 
-                // Check for existence of requested file and its hash
-                if(!file.exists() || !file.canRead() || !hash.exists() || !hash.canRead()) {
-                    System.out.println("server file access error.");
-                    objectOutputStream.writeObject(new ErrorMessage(
-                            new GetMessage.GetFileNotFoundException()));
-                } else {
-                    System.out.println("writing get to client.");
-                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
-                    byte[] hashBytes = Crypto.extractBytesFromFile(hash);
-                    objectOutputStream.writeObject(new GetMessage(fileName, fileBytes, hashBytes));
+                    byte[] fileArray = putMessage.getFileBytes();
+
+                    FileOutputStream fileOutputStream = new FileOutputStream(fileName);
+                    fileOutputStream.write(fileArray);
+                    fileOutputStream.close();
+
+                    // Write hash to disk
+                    byte[] hash = putMessage.getHashBytes();
+                    fileOutputStream = new FileOutputStream(fileName + HASH_EXTENSION);
+                    fileOutputStream.write(hash);
+                    fileOutputStream.close();
+
+
                 }
-            } else if(cmd.getType() == Message.MessageType.PUT) {
-                PutMessage putMessage = (PutMessage) cmd;
-
-                String fileName = putMessage.getFileName();
-
-                byte[] fileArray = putMessage.getFileBytes();
-
-                FileOutputStream fileOutputStream = new FileOutputStream(fileName);
-                fileOutputStream.write(fileArray);
-                fileOutputStream.close();
-
-                // Write hash to disk
-                byte[] hash = putMessage.getHashBytes();
-                fileOutputStream = new FileOutputStream(fileName + HASH_EXTENSION);
-                fileOutputStream.write(hash);
-                fileOutputStream.close();
             }
+
+            //}
             connection.close();
         }
 
