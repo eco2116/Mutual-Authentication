@@ -69,6 +69,7 @@ public class server {
                 byte[] hash = putMessage.getHashArray();
                 fileOutputStream = new FileOutputStream(fileName + HASH_EXTENSION);
                 fileOutputStream.write(hash);
+                fileOutputStream.close();
             }
             connection.close();
         }
