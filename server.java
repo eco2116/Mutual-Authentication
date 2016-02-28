@@ -54,13 +54,11 @@ public class server {
                 }
             } else if(cmd.getType() == Message.MessageType.PUT) {
                 PutMessage putMessage = (PutMessage) cmd;
-                File file = putMessage.getFile();
+
                 String fileName = putMessage.getFileName();
 
-                byte[] fileArray = new byte[(int) file.length()];
-                FileInputStream fileInputStream = new FileInputStream(file);
-                fileInputStream.read(fileArray);
-                fileInputStream.close();
+                byte[] fileArray = putMessage.getFileArray();
+                
                 FileOutputStream fileOutputStream = new FileOutputStream(fileName);
                 fileOutputStream.write(fileArray);
                 fileOutputStream.close();

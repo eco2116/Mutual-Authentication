@@ -124,6 +124,7 @@ public class client {
                                     System.out.println("Did not understand message from server.");
                                 }
 
+                            // Put without encryption
                             } else {
                                 File file = new File(splitCmd[1]);
                                 if(!file.exists() || !file.canRead()) {
@@ -132,7 +133,8 @@ public class client {
                                     continue;
                                 } else {
                                     byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, file);
-                                    objectOutputStream.writeObject(new PutMessage(file.getName(), file, hash));
+                                    byte[] fileBytes = extractBytesFromFile(file);
+                                    objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
                                     System.out.println("sent a put request");
                                 }
                             }
@@ -150,5 +152,29 @@ public class client {
         in.close();
         out.close();
         connection.close();
+    }
+
+    private static byte[] extractBytesFromFile(File file) throws IOException {
+        InputStream inputStream = new FileInputStream(file);
+
+        long length = file.length();
+        if(length > Integer.MAX_VALUE) {
+            // TODO: File is too large - throw put exception
+        }
+
+        byte[] fileBytes = new byte[(int) length];
+
+        int offset = 0;
+        int read = 0;
+        while(offset < fileBytes.length &&
+                (read = inputStream.read(fileBytes, offset, fileBytes.length - offset)) >= 0) {
+            offset += read;
+        }
+        if(offset < fileBytes.length) {
+            // TODO - put exception
+            throw new IOException("Failed to completely read file " + file.getName());
+        }
+        inputStream.close();
+        return fileBytes;
     }
 }
