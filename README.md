@@ -5,6 +5,10 @@ http://stilius.net/java/java_ssl.php (TLS sockets) -- not used right now
 
 http://commandlinefanatic.com/cgi-bin/showarticle.cgi?article=art042 (2-way)
 
+reading file into byte array
+http://www.java-tips.org/java-se-tips-100019/18-java-io/19-reading-a-file-into-a-byte-array.html
+
+
 RUN SERVER
 
 java -Djavax.net.ssl.trustStore=client.jks -Djavax.net.ssl.trustStorePassword=password \

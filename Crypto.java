@@ -1,9 +1,13 @@
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Random;
 
 public class Crypto {
 
@@ -45,4 +49,12 @@ public class Crypto {
         return fileBytes;
     }
 
+    // Class to store pair of encryption and authentication keys
+    public static class Keys {
+        public final SecretKey encr, auth;
+        public Keys(SecretKey encr, SecretKey auth) {
+            this.encr = encr;
+            this.auth = auth;
+        }
+    }
 }

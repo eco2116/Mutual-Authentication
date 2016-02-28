@@ -1,4 +1,8 @@
 
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
@@ -6,7 +10,10 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.Scanner;
 
 /**
@@ -17,6 +24,11 @@ import java.util.Scanner;
 
 public class client {
 
+    public static final String AES_SPEC = "AES";
+    public static final String KEY_GENERATION_SPEC = "PBKDF2WithHmacSHA1";
+
+    public static final int AUTH_SIZE = 8;
+    public static final int AUTH_ITERATIONS = 32768;
     private static final int PASSWORD_LENGTH = 8;
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
@@ -142,6 +154,31 @@ public class client {
         in.close();
         out.close();
         connection.close();
+    }
+
+    private static byte[] generateRandomSalt(int size, String password) {
+        Random random = new Random();
+        byte[] saltBytes = new byte[size];
+
+        random.nextBytes(password.getBytes());
+        return saltBytes;
+    }
+
+
+
+    public static Crypto.Keys generateKeysFromPassword(int size, char[] pass, byte[] salt) throws NoSuchAlgorithmException,
+            InvalidKeySpecException {
+
+        // Initialize and generate secret keys from password and pseudorandom salt
+        SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(KEY_GENERATION_SPEC);
+        KeySpec keySpec = new PBEKeySpec(pass, salt, AUTH_ITERATIONS, size + AUTH_SIZE * 8);
+        SecretKey tmpKey = secretKeyFactory.generateSecret(keySpec);
+        byte[] key = tmpKey.getEncoded();
+
+        // Save encryption and authorization keys in crypto.Keys static storage class
+        SecretKey auth = new SecretKeySpec(Arrays.copyOfRange(key, 0, AUTH_SIZE), AES_SPEC);
+        SecretKey enc = new SecretKeySpec(Arrays.copyOfRange(key, AUTH_SIZE, key.length), AES_SPEC);
+        return new Crypto.Keys(enc, auth);
     }
 
 }
