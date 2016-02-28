@@ -13,6 +13,9 @@ import java.net.Socket;
 public class server {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
+
+        System.setProperty("javax.net.ssl.trustStore", "server.jks");
+        System.setProperty("javax.net.debug", "ssl");
         ServerSocketFactory sslFactory = SSLServerSocketFactory.getDefault();
         ServerSocket listenSocket = sslFactory.createServerSocket(1234);
         ((SSLServerSocket)listenSocket).setNeedClientAuth(true);
@@ -50,13 +53,13 @@ public class server {
                 FileInputStream fileInputStream = new FileInputStream(file);
                 fileInputStream.read(fileArray);
                 fileInputStream.close();
-                FileOutputStream fileOutputStream = new FileOutputStream(fileName+ "-server");
+                FileOutputStream fileOutputStream = new FileOutputStream(fileName);
                 fileOutputStream.write(fileArray);
                 fileOutputStream.close();
 
                 // Write hash to disk
                 byte[] hash = putMessage.getHashArray();
-                fileOutputStream = new FileOutputStream(fileName + "-server.sha256");
+                fileOutputStream = new FileOutputStream(fileName);
                 fileOutputStream.write(hash);
 
             }

@@ -20,7 +20,7 @@ public class client {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
         SocketFactory sslFactory = SSLSocketFactory.getDefault();
-        Socket connection = sslFactory.createSocket("localhost", 1234);
+        Socket connection = sslFactory.createSocket(args[0], 1234);
         OutputStream out = connection.getOutputStream();
         InputStream in = connection.getInputStream();
 
