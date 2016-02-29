@@ -1,15 +1,19 @@
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.DynAnyPackage.Invalid;
+
+import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.KeySpec;
 import java.util.Arrays;
 
@@ -26,7 +30,7 @@ public class Crypto {
     public static final String HASHING_ALGORITHM = "SHA-256";
     private static final int BUFFER_SIZE = 1024;
 
-    public static byte[] generateByteArrayHash(String type, byte[] bytes) throws Exception {
+    public static byte[] generateByteArrayHash(String type, byte[] bytes) throws NoSuchAlgorithmException {
 
         // Initialize message digest for given hashing algorithm and file input stream
         MessageDigest messageDigest = MessageDigest.getInstance(type);
@@ -52,7 +56,9 @@ public class Crypto {
         return messageDigest.digest();
     }
 
-    public static void sendFile(File file, ObjectOutputStream objectOutputStream, String password, boolean generateHash) throws Exception {
+    public static void sendFile(File file, ObjectOutputStream objectOutputStream, String password, boolean generateHash) throws
+            IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException,
+            InvalidKeyException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException {
 
         long size = file.length();
         System.out.println("total length " + size);
@@ -140,8 +146,8 @@ public class Crypto {
 
     }
 
-    public static TransferCompleteMessage consumeFile(ObjectInputStream objectInputStream,
-                                                      FileOutputStream fileOutputStream) throws Exception {
+    public static TransferCompleteMessage consumeFile(ObjectInputStream objectInputStream, FileOutputStream fileOutputStream)
+            throws IOException, ClassNotFoundException {
 
         System.out.println("put message recvd");
 
@@ -162,13 +168,14 @@ public class Crypto {
         }
         System.out.println("msg type " + msg.getType());
         TransferCompleteMessage complete = null;
+        byte[] finalBytes = null;
         if(msg.getType() == Message.MessageType.TRANSFER_COMPLETE) {
             System.out.println("if transfer complete");
             complete = (TransferCompleteMessage) msg;
+            finalBytes = complete.getFinalData();
         }
 
         System.out.println("transfer complete");
-        byte[] finalBytes = complete.getFinalData();
 
         if(finalBytes != null) {
             System.out.println("final bytes length " + finalBytes.length);
@@ -181,8 +188,9 @@ public class Crypto {
         return complete;
     }
 
-    public static TransferCompleteMessage decryptFile(String password, ObjectInputStream objectInputStream,
-                                    String name) throws Exception {
+    public static TransferCompleteMessage decryptFile(String password, ObjectInputStream objectInputStream, String name)
+            throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, ClassNotFoundException, NoSuchPaddingException,
+                InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
 
         FileOutputStream fileOutputStream = new FileOutputStream(name + "-decrypted");
 
@@ -246,7 +254,7 @@ public class Crypto {
     public static SecretKey generateKeysFromPassword(int size, char[] pass, byte[] salt) throws NoSuchAlgorithmException,
             InvalidKeySpecException {
 
-        // Initialize and generate secret keys from password and pseudorandom salt
+        // Initialize and generate secret keys from hashed password and salt
         SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(KEY_GENERATION_SPEC);
         KeySpec keySpec = new PBEKeySpec(pass, salt, AUTH_ITERATIONS, size + AUTH_SIZE * 8);
         SecretKey tmpKey = secretKeyFactory.generateSecret(keySpec);
@@ -293,5 +301,23 @@ public class Crypto {
             System.exit(1);
         }
         return port;
+    }
+
+    public static class ConnectionException extends Exception {
+        public ConnectionException(String msg) {
+            super("Client/server connection failed: " + msg);
+        }
+    }
+
+    public static class RetrievalException extends Exception {
+        public RetrievalException() {
+            super("Failed to retrieve file.");
+        }
+    }
+
+    public static class SendException extends Exception {
+        public SendException() {
+            super("Failed to send file.");
+        }
     }
 }
