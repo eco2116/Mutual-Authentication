@@ -19,34 +19,9 @@ public class client {
     private static final int PASSWORD_LENGTH = 8;
     private static final int NUM_ARGS = 6;
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
-        // Validate command line arguments
-        if(args.length != NUM_ARGS) {
-            System.out.println("Incorrect number of arguments.");
-            System.out.println("Usage: java client <host> <port> <keyStore> <keyStorePassword> <trustStorePassword> <trustStore>");
-            System.exit(1);
-        }
-        InetAddress host = Crypto.validateIP(args[0]);
-        int port = Crypto.validatePort(args[1]);
-        String keyStore = Crypto.validateCertFileName(args[2]);
-        String keyStorePassword = args[3];
-        String trustStore = Crypto.validateCertFileName(args[4]);
-        String trustStorePassword = args[5];
-
-        //System.setProperty("javax.net.debug", "all");
-
-        // Set up system properties needed for mutual authentication
-        System.setProperty("javax.net.ssl.keyStore", keyStore);
-        System.setProperty("javax.net.ssl.keyStorePassword", keyStorePassword); // TODO: better password?
-        System.setProperty("javax.net.ssl.trustStore", trustStore);
-        System.setProperty("javax.net.ssl.trustStorePassword", trustStorePassword);
-
-        // Create SSL sockets and streams
-        SocketFactory sslFactory = SSLSocketFactory.getDefault();
-        Socket connection = sslFactory.createSocket(host, port);
-        OutputStream out = connection.getOutputStream();
-        InputStream in = connection.getInputStream();
+        Socket connection = setUpInteraction(args);
 
         // Create object streams for sending/reading Message objects
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(connection.getOutputStream());
@@ -61,6 +36,7 @@ public class client {
             for(String s : splitCmd) {
                 System.out.println("cmd" + s);
             }
+
             if(splitCmd.length == 0) {
                 System.out.println("Please enter a command.");
             } else {
@@ -97,39 +73,23 @@ public class client {
                                 System.out.println("Password must be 8 bytes long.");
                                 continue;
                             } else if (splitCmd[0].equals("get")) {
-                                objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
-                                Message message = (Message) objectInputStream.readObject();
-                                if(message.getType() == Message.MessageType.ERROR) {
-                                    System.out.println(((ErrorMessage) message).getException().getMessage());
-                                    continue;
-                                } else if(message.getType() == Message.MessageType.PUT) {
-                                    PutMessage putMessage = (PutMessage) message;
-                                    File file = new File(putMessage.getFileName());
-                                    TransferCompleteMessage complete = Crypto.decryptFile(splitCmd[3],
-                                            objectInputStream, file.getName());
-                                    // TODO: can refactor this
-                                    byte[] clientHash = Crypto.generateFileHash(Crypto.HASHING_ALGORITHM, file);
-                                    byte[] serverHash = complete.getHash();
-
-                                    if(!Arrays.equals(clientHash, serverHash)) {
-                                        // TODO: delete file
-                                        System.out.println("Calculated hash did not match hash server sent.");
-                                    } else {
-                                        System.out.println("they matched.");
-                                    }
+                                // Get with encryption
+                                try {
+                                    handleGetEncrypted(objectOutputStream, objectInputStream, splitCmd);
+                                } catch(Crypto.RetrievalException e) {
+                                    // TODO: send error?
+                                    System.out.println(e.getMessage());
+                                } catch(Crypto.ConnectionException e) {
+                                    System.out.println(e.getMessage());
                                 }
-
-
                             } else {
-                                File file = new File(splitCmd[1]);
-                                if(!file.exists() || !file.canRead()) {
-                                    System.out.println("Failed to access file: " + splitCmd[1]);
-                                    objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
-                                    continue;
-                                } else {
-                                    Crypto.sendFile(file, objectOutputStream, splitCmd[3], true);
-                                    System.out.println("sent a put request");
+                                // Put with encryption
+                                try {
+                                    handlePutEncrypted(objectOutputStream, splitCmd);
+                                } catch(Crypto.SendException e) {
+                                    System.out.println(e.getMessage());
                                 }
+
                             }
                         }
                     // without encryption
@@ -139,41 +99,24 @@ public class client {
                             System.out.println("Only filename and \"E\" or \"N\".");
                             continue;
                         } else {
+                            // Get without encryption
                             if(splitCmd[0].equals("get")) {
-                                objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
-                                Message message = (Message) objectInputStream.readObject();
-                                if(message.getType() == Message.MessageType.ERROR) {
-                                    System.out.println(((ErrorMessage) message).getException().getMessage());
-                                    continue;
-                                } else if(message.getType() == Message.MessageType.PUT) {
-                                    PutMessage putMessage = (PutMessage) message;
-                                    File file = new File(putMessage.getFileName());
-                                    TransferCompleteMessage complete = Crypto.consumeFile(objectInputStream,
-                                            new FileOutputStream(file));
-
-
-                                    byte[] clientHash = Crypto.generateFileHash(Crypto.HASHING_ALGORITHM, file);
-                                    byte[] serverHash = complete.getHash();
-
-                                    if(!Arrays.equals(clientHash, serverHash)) {
-                                        System.out.println("Calculated hash did not match hash server sent.");
-                                    } else {
-                                        System.out.println("they matched.");
-                                    }
-                                } else {
-                                    System.out.println("Did not understand message from server.");
+                                try {
+                                    handleGetUnencrypted(objectOutputStream, objectInputStream, splitCmd);
+                                } catch(Crypto.RetrievalException e) {
+                                    System.out.println(e.getMessage());
+                                } catch(Crypto.ConnectionException e) {
+                                    System.out.println(e.getMessage());
                                 }
 
                             // Put without encryption
                             } else {
-                                File file = new File(splitCmd[1]);
-                                if(!file.exists() || !file.canRead()) {
-                                    System.out.println("Failed to access file: " + splitCmd[1]);
-                                    objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
-                                    continue;
-                                } else {
-                                    Crypto.sendFile(file, objectOutputStream, null, true);
-                                    System.out.println("sent a put request");
+                                try {
+                                    handlePutUnencrypted(objectOutputStream, splitCmd);
+                                } catch(Crypto.ConnectionException e) {
+                                    System.out.println(e.getMessage());
+                                } catch(Crypto.SendException e) {
+                                    System.out.println(e.getMessage());
                                 }
                             }
                         }
@@ -187,10 +130,143 @@ public class client {
             }
 
         }
-        in.close();
-        out.close();
+
         connection.close();
     }
 
+    private static Socket setUpInteraction(String[] args) throws Crypto.ConnectionException {
+        // Validate command line arguments
+        if(args.length != NUM_ARGS) {
+            System.out.println("Incorrect number of arguments.");
+            System.out.println("Usage: java client <host> <port> <keyStore> <keyStorePassword> <trustStorePassword> <trustStore>");
+            System.exit(1);
+        }
+        InetAddress host = Crypto.validateIP(args[0]);
+        int port = Crypto.validatePort(args[1]);
+        String keyStore = Crypto.validateCertFileName(args[2]);
+        String keyStorePassword = args[3];
+        String trustStore = Crypto.validateCertFileName(args[4]);
+        String trustStorePassword = args[5];
 
+        //System.setProperty("javax.net.debug", "all");
+
+        // Set up system properties needed for mutual authentication
+        System.setProperty("javax.net.ssl.keyStore", keyStore);
+        System.setProperty("javax.net.ssl.keyStorePassword", keyStorePassword); // TODO: better password?
+        System.setProperty("javax.net.ssl.trustStore", trustStore);
+        System.setProperty("javax.net.ssl.trustStorePassword", trustStorePassword);
+
+        // Create SSL sockets and streams
+        SocketFactory sslFactory = SSLSocketFactory.getDefault();
+        try {
+            return sslFactory.createSocket(host, port);
+        } catch(IOException e) {
+            throw new Crypto.ConnectionException("Failed to create socket on client side.");
+        }
+    }
+
+    private static void handleGetEncrypted(ObjectOutputStream objectOutputStream, ObjectInputStream objectInputStream,
+                                           String[] splitCmd) throws Crypto.RetrievalException, Crypto.ConnectionException {
+        try {
+            objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
+            Message message = (Message) objectInputStream.readObject();
+            if(message.getType() == Message.MessageType.ERROR) {
+                System.out.println(((ErrorMessage) message).getException().getMessage());
+            } else if(message.getType() == Message.MessageType.PUT) {
+                PutMessage putMessage = (PutMessage) message;
+                File file = new File(putMessage.getFileName());
+                TransferCompleteMessage complete = Crypto.decryptFile(splitCmd[3], objectInputStream, file.getName());
+                // TODO: can refactor this
+                byte[] clientHash = Crypto.generateFileHash(Crypto.HASHING_ALGORITHM, file);
+                byte[] serverHash = complete.getHash();
+
+                if(!Arrays.equals(clientHash, serverHash)) {
+                    // TODO: delete file
+                    System.out.println("Calculated hash did not match hash server sent.");
+                } else {
+                    System.out.println("they matched.");
+                }
+            }
+        } catch(Exception e) {
+            try {
+                objectOutputStream.writeObject(new ErrorMessage(e));
+            } catch(IOException e1) {
+                throw new Crypto.ConnectionException("Unexpected message.");
+            }
+            throw new Crypto.RetrievalException();
+        }
+    }
+
+    private static void handlePutEncrypted(ObjectOutputStream objectOutputStream, String[] splitCmd) throws Crypto.SendException {
+        File file = new File(splitCmd[1]);
+        try {
+            if(!file.exists() || !file.canRead()) {
+                System.out.println("Failed to access file: " + splitCmd[1]);
+                objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
+            } else {
+                Crypto.sendFile(file, objectOutputStream, splitCmd[3], true);
+                System.out.println("sent a put request");
+            }
+        } catch(Exception e) {
+            throw new Crypto.SendException();
+        }
+    }
+
+    private static void handleGetUnencrypted(ObjectOutputStream objectOutputStream, ObjectInputStream objectInputStream,
+                                             String[] splitCmd) throws Crypto.RetrievalException, Crypto.ConnectionException {
+
+        try {
+            objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
+            Message message = (Message) objectInputStream.readObject();
+            if(message.getType() == Message.MessageType.ERROR) {
+                System.out.println(((ErrorMessage) message).getException().getMessage());
+            } else if(message.getType() == Message.MessageType.PUT) {
+                PutMessage putMessage = (PutMessage) message;
+                File file = new File(putMessage.getFileName());
+                TransferCompleteMessage complete = Crypto.consumeFile(objectInputStream, new FileOutputStream(file));
+
+                byte[] clientHash = Crypto.generateFileHash(Crypto.HASHING_ALGORITHM, file);
+                byte[] serverHash = complete.getHash();
+
+                if(!Arrays.equals(clientHash, serverHash)) {
+                    System.out.println("Calculated hash did not match hash server sent.");
+                } else {
+                    System.out.println("they matched.");
+                }
+            } else {
+                System.out.println("Did not understand message from server.");
+            }
+        } catch(Exception e) {
+            try {
+                objectOutputStream.writeObject(new ErrorMessage(e));
+            } catch(IOException e1) {
+                throw new Crypto.ConnectionException("Failed to write message.");
+            }
+
+            throw new Crypto.RetrievalException();
+        }
+    }
+
+    private static void handlePutUnencrypted(ObjectOutputStream objectOutputStream, String[] splitCmd)
+            throws Crypto.ConnectionException, Crypto.SendException {
+
+        try {
+            File file = new File(splitCmd[1]);
+            if(!file.exists() || !file.canRead()) {
+                System.out.println("Failed to access file: " + splitCmd[1]);
+                objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
+            } else {
+                Crypto.sendFile(file, objectOutputStream, null, true);
+                System.out.println("sent a put request");
+            }
+        } catch(Exception e) {
+            try {
+                objectOutputStream.writeObject(new ErrorMessage(e));
+            } catch(IOException e1) {
+                throw new Crypto.ConnectionException("Failed to write message.");
+            }
+            throw new Crypto.SendException();
+        }
+
+    }
 }
