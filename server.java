@@ -72,10 +72,11 @@ public class server {
                 while (true) {
                     Message cmd = (Message) objectInputStream.readObject();
                     if (cmd.getType() == Message.MessageType.STOP) {
-                        System.out.println("Received a stop request from client. Exiting...");
+                        objectInputStream.close();
+                        objectOutputStream.close();
                         connection.close();
                         // TODO: close stuff
-                        break;
+                        throw new Crypto.ConnectionException("Received a stop request from client. Exiting...");
                     } else if (cmd.getType() == Message.MessageType.GET) {
                         try {
                             handleSendFile(cmd, objectOutputStream);
