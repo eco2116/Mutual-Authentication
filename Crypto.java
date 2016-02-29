@@ -53,30 +53,6 @@ public class Crypto {
         return messageDigest.digest();
     }
 
-//    public static byte[] extractBytesFromFile(File file) throws IOException {
-//        InputStream inputStream = new FileInputStream(file);
-//
-//        long length = file.length();
-//        if(length > Integer.MAX_VALUE) {
-//            // TODO: File is too large - throw put exception
-//        }
-//
-//        byte[] fileBytes = new byte[(int) length];
-//
-//        int offset = 0;
-//        int read = 0;
-//        while(offset < fileBytes.length &&
-//                (read = inputStream.read(fileBytes, offset, fileBytes.length - offset)) >= 0) {
-//            offset += read;
-//        }
-//        if(offset < fileBytes.length) {
-//            // TODO - put exception
-//            throw new IOException("Failed to completely read file " + file.getName());
-//        }
-//        inputStream.close();
-//        return fileBytes;
-//    }
-
     public static void sendFile(File file, ObjectOutputStream objectOutputStream, String password, boolean generateHash) throws Exception {
 
         long size = file.length();
@@ -93,13 +69,13 @@ public class Crypto {
             byte[] hashPwd =  generateByteArrayHash(HASHING_ALGORITHM, password.getBytes());
             char[] charHash = new String(hashPwd, "UTF-8").toCharArray();
 
-            Keys secret = generateKeysFromPassword(AES_KEY_LENGTH, charHash, salt);
+            SecretKey secret = generateKeysFromPassword(AES_KEY_LENGTH, charHash, salt);
 
             Cipher encrCipher;
 
             // Initialize AES cipher
             encrCipher = Cipher.getInstance(CIPHER_SPEC);
-            encrCipher.init(Cipher.ENCRYPT_MODE, secret.encr);
+            encrCipher.init(Cipher.ENCRYPT_MODE, secret);
 
             // Generate initialization vector
             byte[] iv = encrCipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV();
@@ -216,7 +192,7 @@ public class Crypto {
         byte[] hashPwd =  generateByteArrayHash(HASHING_ALGORITHM, password.getBytes());
         char[] charHash = new String(hashPwd, "UTF-8").toCharArray();
 
-        Crypto.Keys keys = Crypto.generateKeysFromPassword(AES_KEY_LENGTH, charHash, saltBytes);
+        SecretKey secret = Crypto.generateKeysFromPassword(AES_KEY_LENGTH, charHash, saltBytes);
 
         DataMessage dataMessage = (DataMessage) objectInputStream.readObject();
         byte[] data = dataMessage.getData();
@@ -226,7 +202,7 @@ public class Crypto {
         System.out.println("decryption received iv of size : " + iv.length);
 
         Cipher decrpytCipher = Cipher.getInstance(Crypto.CIPHER_SPEC);
-        decrpytCipher.init(Cipher.DECRYPT_MODE, keys.encr, new IvParameterSpec(iv));
+        decrpytCipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(iv));
 
         // Use a buffer to decrypt and write to disk
         byte[] buff = new byte[Crypto.BUFFER_SIZE];
@@ -268,7 +244,7 @@ public class Crypto {
         return transferCompleteMessage;
     }
 
-    public static Keys generateKeysFromPassword(int size, char[] pass, byte[] salt) throws NoSuchAlgorithmException,
+    public static SecretKey generateKeysFromPassword(int size, char[] pass, byte[] salt) throws NoSuchAlgorithmException,
             InvalidKeySpecException {
 
         // Initialize and generate secret keys from password and pseudorandom salt
@@ -278,9 +254,9 @@ public class Crypto {
         byte[] key = tmpKey.getEncoded();
 
         // Save encryption and authorization keys in crypto.Keys static storage class
-        SecretKey auth = new SecretKeySpec(Arrays.copyOfRange(key, 0, AUTH_SIZE), AES_SPEC);
-        SecretKey enc = new SecretKeySpec(Arrays.copyOfRange(key, AUTH_SIZE, key.length), AES_SPEC);
-        return new Keys(enc, auth);
+//        SecretKey auth = new SecretKeySpec(Arrays.copyOfRange(key, 0, AUTH_SIZE), AES_SPEC);
+        return new SecretKeySpec(Arrays.copyOfRange(key, AUTH_SIZE, key.length), AES_SPEC);
+        //return new Keys(enc, auth);
     }
 
     public static String validateCertFileName(String input) {
@@ -321,15 +297,5 @@ public class Crypto {
             System.exit(1);
         }
         return port;
-    }
-
-    // TODO: do we even need both keys?
-    // Class to store pair of encryption and authentication keys
-    public static class Keys {
-        public final SecretKey encr, auth;
-        public Keys(SecretKey encr, SecretKey auth) {
-            this.encr = encr;
-            this.auth = auth;
-        }
     }
 }

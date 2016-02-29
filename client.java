@@ -89,8 +89,9 @@ public class client {
                             System.out.println("Filename, \"E\" or \"N\", and password required.");
                             continue;
                         } else {
-                            if (splitCmd[3].length() != PASSWORD_LENGTH) {
-                                System.out.println("Password must be 8 characters long.");
+                            System.out.println("pwd bytes : " + splitCmd[3].getBytes().length);
+                            if (splitCmd[3].getBytes().length != PASSWORD_LENGTH) {
+                                System.out.println("Password must be 8 bytes long.");
                                 continue;
                             } else if (splitCmd[0].equals("get")) {
                                 objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
