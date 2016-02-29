@@ -111,7 +111,6 @@ public class client {
 
     private static void handleGetUnencrypted(ObjectOutputStream objectOutputStream, ObjectInputStream objectInputStream,
                                              String[] splitCmd) throws Crypto.RetrievalException, Crypto.ConnectionException {
-
         try {
             objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
             Message message = (Message) objectInputStream.readObject();
@@ -139,7 +138,6 @@ public class client {
             } catch(IOException e1) {
                 throw new Crypto.ConnectionException("Failed to write message.");
             }
-
             throw new Crypto.RetrievalException();
         }
     }
@@ -215,6 +213,7 @@ public class client {
                     System.out.println(e.getMessage());
                 } catch(Crypto.ConnectionException e) {
                     System.out.println(e.getMessage());
+                    System.exit(1);
                 }
             } else {
                 try {
