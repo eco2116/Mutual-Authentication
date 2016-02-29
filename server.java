@@ -53,7 +53,7 @@ public class server {
                             objectOutputStream.writeObject(new ErrorMessage(
                                     new GetMessage.GetFileNotFoundException()));
                         } else {
-                            Crypto.sendFile(file, objectOutputStream);
+                            Crypto.sendFile(file, objectOutputStream, null);
                             System.out.println("writing get to client.");
 //                            byte[] fileBytes = Crypto.extractBytesFromFile(file);
 //                            byte[] hashBytes = Crypto.extractBytesFromFile(hash);

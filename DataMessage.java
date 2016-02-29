@@ -4,10 +4,9 @@ public class DataMessage extends Message {
     private byte[] data;
     public int number;
 
-    public DataMessage(byte[] data, int number) {
+    public DataMessage(byte[] data) {
         super(MessageType.DATA);
         this.data = data;
-        this.number = number;
     }
 
     public byte[] getData() { return this.data; }

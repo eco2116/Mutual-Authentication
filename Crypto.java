@@ -1,21 +1,37 @@
+import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
 import java.util.Arrays;
 
 public class Crypto {
+    public static final String AES_SPEC = "AES";
+    public static final String KEY_GENERATION_SPEC = "PBKDF2WithHmacSHA1";
+    private static final String CIPHER_SPEC = "AES/CBC/PKCS5Padding";
+    private static final int AES_KEY_LENGTH = 128;
+
+
+    public static final int AUTH_SIZE = 8;
+    public static final int AUTH_ITERATIONS = 32768;
+    public static final int SALT_SIZE = 16;
 
     public static final String HASHING_ALGORITHM = "SHA-256";
     private static final int BUFFER_SIZE = 1024;
 
-    public static byte[] generateHash(String type, byte[] fileBytes) throws NoSuchAlgorithmException, IOException {
+    public static byte[] generateHash(String type, byte[] bytes) throws NoSuchAlgorithmException, IOException {
 
         // Initialize message digest for given hashing algorithm and file input stream
         MessageDigest messageDigest = MessageDigest.getInstance(type);
 
         // TODO: is this okay? no loop?
-        messageDigest.update(fileBytes, 0, fileBytes.length);
+        messageDigest.update(bytes, 0, bytes.length);
 
         // Digest hashed bytes
         return messageDigest.digest();
@@ -45,7 +61,7 @@ public class Crypto {
         return fileBytes;
     }
 
-    public static void sendFile(File file, ObjectOutputStream objectOutputStream) throws IOException, NoSuchAlgorithmException {
+    public static void sendFile(File file, ObjectOutputStream objectOutputStream, String password) throws Exception {
 
         long size = file.length();
         System.out.println("total length " + size);
@@ -55,23 +71,64 @@ public class Crypto {
 
         byte[] buff = new byte[BUFFER_SIZE];
         int read;
-        int count = 0;
-        while ((read = fileInputStream.read(buff)) >= 0) {
-            System.out.println("read " + read);
 
-            if(read < BUFFER_SIZE) {
-                System.out.println("less than buffer");
-                break;
-            } else {
-                System.out.println("writing data msg");
-                System.out.println(buff[0]);
-                DataMessage dm = new DataMessage(buff, count++);
+        if(password != null) {
+            byte[] salt = new byte[SALT_SIZE];
+            byte[] hashPwd =  generateHash(HASHING_ALGORITHM, password.getBytes());
+            char[] charHash = new String(hashPwd, "UTF-8").toCharArray();
+
+            Keys secret = generateKeysFromPassword(AES_KEY_LENGTH, charHash, salt);
+
+            Cipher encrCipher;
+
+            // Initialize AES cipher
+            encrCipher = Cipher.getInstance(CIPHER_SPEC);
+            encrCipher.init(Cipher.ENCRYPT_MODE, secret.encr);
+
+            // Generate initialization vector
+            byte[] iv = encrCipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV();
+            objectOutputStream.writeObject(new DataMessage(iv));
+            objectOutputStream.reset();
+
+            byte[] encr;
+
+            while ((read = fileInputStream.read(buff)) >= 0) {
+                encr = encrCipher.update(buff, 0, read);
+                if(encr != null) {
+                    DataMessage dm = new DataMessage(encr);
+                    objectOutputStream.writeObject(dm);
+                    objectOutputStream.reset();
+                }
+            }
+            // Final encryption block
+            encr = encrCipher.doFinal();
+            if(encr != null) {
+                DataMessage dm = new DataMessage(encr);
                 objectOutputStream.writeObject(dm);
                 objectOutputStream.reset();
-                objectOutputStream.flush();
+            }
+
+        } else {
+            while ((read = fileInputStream.read(buff)) >= 0) {
+                System.out.println("read " + read);
+
+                if(read < BUFFER_SIZE) {
+                    System.out.println("less than buffer");
+                    break;
+                } else {
+                    System.out.println("writing data msg");
+                    System.out.println(buff[0]);
+                    DataMessage dm = new DataMessage(buff);
+                    objectOutputStream.writeObject(dm);
+                    objectOutputStream.reset();
+                    objectOutputStream.flush();
+                }
             }
         }
-        System.out.println("out of while loop and read is " + read);
+        /*
+
+         */
+
         byte[] fileBytes = Crypto.extractBytesFromFile(file);
         byte[] hashBytes = Crypto.generateHash(Crypto.HASHING_ALGORITHM, fileBytes);
         if(read > 0) {
@@ -125,6 +182,21 @@ public class Crypto {
         return complete;
     }
 
+    public static Keys generateKeysFromPassword(int size, char[] pass, byte[] salt) throws NoSuchAlgorithmException,
+            InvalidKeySpecException {
+
+        // Initialize and generate secret keys from password and pseudorandom salt
+        SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(KEY_GENERATION_SPEC);
+        KeySpec keySpec = new PBEKeySpec(pass, salt, AUTH_ITERATIONS, size + AUTH_SIZE * 8);
+        SecretKey tmpKey = secretKeyFactory.generateSecret(keySpec);
+        byte[] key = tmpKey.getEncoded();
+
+        // Save encryption and authorization keys in crypto.Keys static storage class
+        SecretKey auth = new SecretKeySpec(Arrays.copyOfRange(key, 0, AUTH_SIZE), AES_SPEC);
+        SecretKey enc = new SecretKeySpec(Arrays.copyOfRange(key, AUTH_SIZE, key.length), AES_SPEC);
+        return new Keys(enc, auth);
+    }
+    // TODO: do we even need both keys?
     // Class to store pair of encryption and authentication keys
     public static class Keys {
         public final SecretKey encr, auth;

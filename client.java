@@ -87,10 +87,21 @@ public class client {
                             if (splitCmd[3].length() != PASSWORD_LENGTH) {
                                 System.out.println("Password must be 8 characters long.");
                                 continue;
-                            } else if (splitCmd[0].equals("get")){
-                                objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
+                            } else if (splitCmd[0].equals("get")) {
+                                //objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
                             } else {
-                                //objectOutputStream.writeObject(new PutMessage(splitCmd[1]));
+                                File file = new File(splitCmd[1]);
+                                if(!file.exists() || !file.canRead()) {
+                                    System.out.println("Failed to access file: " + splitCmd[1]);
+                                    objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
+                                    continue;
+                                } else {
+//                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, Crypto.extractBytesFromFile(file));
+//                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
+//                                    objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
+                                    Crypto.sendFile(file, objectOutputStream, splitCmd[3]);
+                                    System.out.println("sent a put request");
+                                }
                             }
                         }
                     // without encryption
@@ -136,7 +147,7 @@ public class client {
 //                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, Crypto.extractBytesFromFile(file));
 //                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
 //                                    objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
-                                    Crypto.sendFile(file, objectOutputStream);
+                                    Crypto.sendFile(file, objectOutputStream, null);
                                     System.out.println("sent a put request");
                                 }
                             }
