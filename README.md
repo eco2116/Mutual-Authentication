@@ -11,13 +11,11 @@ http://www.java-tips.org/java-se-tips-100019/18-java-io/19-reading-a-file-into-a
 
 RUN SERVER
 
-java -Djavax.net.ssl.trustStore=client.jks -Djavax.net.ssl.trustStorePassword=password \
--Djavax.net.ssl.keyStore=server.jks -Djavax.net.ssl.keyStorePassword=password server
+java server 1234 server.jks password client.jks password
 
 RUN CLIENT
 
-java -Djavax.net.ssl.keyStore=client.jks -Djavax.net.ssl.keyStorePassword=password \
--Djavax.net.ssl.trustStore=server.jks -Djavax.net.ssl.trustStorePassword=password client
+java client vienna.clic.cs.columbia.edu 1234 client.jks password server.jks password
 
 GENERATE SERVER CERTIFICATE
 
