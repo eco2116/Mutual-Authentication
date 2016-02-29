@@ -53,57 +53,22 @@ public class server {
                             objectOutputStream.writeObject(new ErrorMessage(
                                     new GetMessage.GetFileNotFoundException()));
                         } else {
+                            Crypto.sendFile(file, objectOutputStream);
                             System.out.println("writing get to client.");
-                            byte[] fileBytes = Crypto.extractBytesFromFile(file);
-                            byte[] hashBytes = Crypto.extractBytesFromFile(hash);
-                            objectOutputStream.writeObject(new GetMessage(fileName, fileBytes, hashBytes));
+//                            byte[] fileBytes = Crypto.extractBytesFromFile(file);
+//                            byte[] hashBytes = Crypto.extractBytesFromFile(hash);
+//                            objectOutputStream.writeObject(new GetMessage(fileName, fileBytes, hashBytes));
                         }
                     } else if (cmd.getType() == Message.MessageType.PUT) {
 
                         PutMessage putMessage = (PutMessage) cmd;
-                        long size = putMessage.getTotalSize();
                         String fileName = putMessage.getFileName();
-                        FileOutputStream fileOutputStream = new FileOutputStream(fileName + "copy");
+                        FileOutputStream fileOutputStream = new FileOutputStream(fileName);
 
-                        System.out.println("put message recvd");
-
-                        Message msg = (Message) objectInputStream.readObject();
-
-                        while(msg.getType() == Message.MessageType.DATA) {
-                            System.out.println("while msg type " + msg.getType());
-                            System.out.println("data recvd ");
-
-                            DataMessage dataMessage = (DataMessage) msg;
-                            byte[] dataChunk = dataMessage.getData();
-                            System.out.println("data number " + dataMessage.number);
-                            System.out.println("wrote " + dataChunk.length);
-                            fileOutputStream.write(dataChunk);
-                            fileOutputStream.flush();
-
-                            msg = (Message) objectInputStream.readObject();
-                        }
-                        System.out.println("msg type " + msg.getType());
-                        TransferCompleteMessage complete = null;
-                        if(msg.getType() == Message.MessageType.TRANSFER_COMPLETE) {
-                            System.out.println("if transfer complete");
-                            complete = (TransferCompleteMessage) msg;
-                        }
-
-                        System.out.println("transfer complete");
-                        byte[] finalBytes = complete.getFinalData();
-
-                        if(finalBytes != null) {
-                            System.out.println("final bytes length " + finalBytes.length);
-                            System.out.println("writing final bytes");
-                            fileOutputStream.write(finalBytes);
-                        }
-                        System.out.println("wrote file");
-
-                        fileOutputStream.close();
-
-//                        fileOutputStream = new FileOutputStream(fileName + ".sha256");
-//                        fileOutputStream.write(complete.getHash());
-//                        System.out.println("wrote hash");
+                        TransferCompleteMessage complete = Crypto.consumeFile(objectInputStream, fileOutputStream);
+                        fileOutputStream = new FileOutputStream(fileName + ".sha256");
+                        fileOutputStream.write(complete.getHash());
+                        System.out.println("wrote hash");
 
                     }
                 }

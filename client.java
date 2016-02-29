@@ -30,9 +30,8 @@ public class client {
     public static final int AUTH_SIZE = 8;
     public static final int AUTH_ITERATIONS = 32768;
     private static final int PASSWORD_LENGTH = 8;
-    private static final int BUFFER_SIZE = 1024;
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
+    public static void main(String[] args) throws Exception {
 
         //System.setProperty("javax.net.debug", "all");
 
@@ -107,21 +106,20 @@ public class client {
                                 if(message.getType() == Message.MessageType.ERROR) {
                                     System.out.println(((ErrorMessage) message).getException().getMessage());
                                     continue;
-                                } else if(message.getType() == Message.MessageType.GET) {
-                                    GetMessage getMessage = (GetMessage) message;
-                                    System.out.println("Get received " + getMessage.getFileName());
-                                    byte[] fileBytes = getMessage.getFileBytes();
+                                } else if(message.getType() == Message.MessageType.PUT) {
+                                    PutMessage putMessage = (PutMessage) message;
+                                    File file = new File(putMessage.getFileName());
+                                    TransferCompleteMessage complete = Crypto.consumeFile(objectInputStream,
+                                            new FileOutputStream(file));
+
+                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
                                     byte[] clientHash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, fileBytes);
-                                    byte[] serverHash = getMessage.getHashBytes();
+                                    byte[] serverHash = complete.getHash();
 
                                     if(!Arrays.equals(clientHash, serverHash)) {
                                         System.out.println("Calculated hash did not match hash server sent.");
                                     } else {
-                                        FileOutputStream fileOutputStream = new FileOutputStream(getMessage.getFileName());
-                                        fileOutputStream.write(fileBytes);
-                                        fileOutputStream.close();
-                                        System.out.println("Wrote new file ");
-
+                                        System.out.println("they matched.");
                                     }
                                 } else {
                                     System.out.println("Did not understand message from server.");
@@ -138,7 +136,7 @@ public class client {
 //                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, Crypto.extractBytesFromFile(file));
 //                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
 //                                    objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
-                                    sendFile(file, objectOutputStream);
+                                    Crypto.sendFile(file, objectOutputStream);
                                     System.out.println("sent a put request");
                                 }
                             }
@@ -181,51 +179,6 @@ public class client {
         SecretKey auth = new SecretKeySpec(Arrays.copyOfRange(key, 0, AUTH_SIZE), AES_SPEC);
         SecretKey enc = new SecretKeySpec(Arrays.copyOfRange(key, AUTH_SIZE, key.length), AES_SPEC);
         return new Crypto.Keys(enc, auth);
-    }
-
-    private static void sendFile(File file, ObjectOutputStream objectOutputStream) throws IOException, NoSuchAlgorithmException {
-
-        long size = file.length();
-        System.out.println("total length " + size);
-
-        objectOutputStream.writeObject(new PutMessage(file.getName(), size));
-        FileInputStream fileInputStream = new FileInputStream(file);
-        //BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
-
-        //BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
-
-        byte[] buff = new byte[BUFFER_SIZE];
-        int read;
-        int total = 0;
-        int count = 0;
-        while ((read = fileInputStream.read(buff)) >= 0) {
-            total += read;
-            System.out.println("read " + read);
-
-            if(read < BUFFER_SIZE) {
-                System.out.println("less than buffer");
-                break;
-            } else {
-                System.out.println("writing data msg");
-                System.out.println(buff[0]);
-                DataMessage dm = new DataMessage(buff, count++);
-                objectOutputStream.writeObject(dm);
-                objectOutputStream.reset();
-                objectOutputStream.flush();
-            }
-        }
-        System.out.println("out of while loop and read is " + read);
-        byte[] fileBytes = Crypto.extractBytesFromFile(file);
-        byte[] hashBytes = Crypto.generateHash(Crypto.HASHING_ALGORITHM, fileBytes);
-        if(read > 0) {
-            objectOutputStream.writeObject(new TransferCompleteMessage(hashBytes, Arrays.copyOf(buff, read)));
-        } else {
-            System.out.println("null final bytes");
-            objectOutputStream.writeObject(new TransferCompleteMessage(hashBytes, null));
-        }
-        System.out.println("wrote transfer complete ");
-        //bufferedInputStream.close();
-        fileInputStream.close();
     }
 
     /*
