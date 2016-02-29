@@ -17,11 +17,13 @@ public class server {
 
     public static void main(String[] args) {
         try {
-            ServerSocket listenSocket = setUpInteraction(args);
-            interactWithClient(listenSocket);
+            ServerSocket listenSocket = setUpInteraction(args); // Set up streams and sockets
+            interactWithClient(listenSocket); // Begin interaction with the client
         } catch(Crypto.ConnectionException e) {
+            // Non-recoverable connection error
             System.out.println(e.getMessage());
         } catch(Crypto.StopException e) {
+            // Client requested to stop the interaction
             System.out.println(e.getMessage());
         }
     }
@@ -52,6 +54,8 @@ public class server {
         ServerSocketFactory sslFactory = SSLServerSocketFactory.getDefault();
         try {
             listenSocket = sslFactory.createServerSocket(port);
+
+            // Ensure mutual authentication by requiring a verified signature
             ((SSLServerSocket)listenSocket).setNeedClientAuth(true);
         } catch(IOException e) {
             throw new Crypto.ConnectionException("Failed to create server socket.");
