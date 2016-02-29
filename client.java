@@ -58,6 +58,9 @@ public class client {
             System.out.print("> ");
             String userCmd = input.nextLine();
             String[] splitCmd = userCmd.split(" ");
+            for(String s : splitCmd) {
+                System.out.println("cmd" + s);
+            }
             if(splitCmd.length == 0) {
                 System.out.println("Please enter a command.");
             } else {

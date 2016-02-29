@@ -19,7 +19,6 @@ public class Crypto {
     private static final String CIPHER_SPEC = "AES/CBC/PKCS5Padding";
     private static final int AES_KEY_LENGTH = 128;
 
-
     public static final int AUTH_SIZE = 8;
     public static final int AUTH_ITERATIONS = 32768;
     public static final int SALT_SIZE = 16;
@@ -217,9 +216,8 @@ public class Crypto {
             dataMessage = (DataMessage) msg;
             decrypt = decrpytCipher.update(dataMessage.getData(), 0, dataMessage.getData().length);
             System.out.println("decrypted: " + decrypt.length);
-            if(decrypt != null) {
-                fileOutputStream.write(decrypt);
-            }
+            fileOutputStream.write(decrypt);
+
         }
         fileOutputStream.flush();
         System.out.println("out of data block");
@@ -234,6 +232,7 @@ public class Crypto {
 
 
         // Decrypt final block
+        // TODO: catch bad padding exception here - wrong key, encryption failed? (unencrypted?)
         decrypt = decrpytCipher.doFinal();
         if(decrypt != null) {
             fileOutputStream.write(decrypt);
@@ -253,10 +252,7 @@ public class Crypto {
         SecretKey tmpKey = secretKeyFactory.generateSecret(keySpec);
         byte[] key = tmpKey.getEncoded();
 
-        // Save encryption and authorization keys in crypto.Keys static storage class
-//        SecretKey auth = new SecretKeySpec(Arrays.copyOfRange(key, 0, AUTH_SIZE), AES_SPEC);
         return new SecretKeySpec(Arrays.copyOfRange(key, AUTH_SIZE, key.length), AES_SPEC);
-        //return new Keys(enc, auth);
     }
 
     public static String validateCertFileName(String input) {
