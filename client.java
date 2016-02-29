@@ -30,6 +30,7 @@ public class client {
     public static final int AUTH_SIZE = 8;
     public static final int AUTH_ITERATIONS = 32768;
     private static final int PASSWORD_LENGTH = 8;
+    private static final int BUFFER_SIZE = 1024;
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
 
@@ -90,7 +91,7 @@ public class client {
                             } else if (splitCmd[0].equals("get")){
                                 objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
                             } else {
-                                objectOutputStream.writeObject(new PutMessage(splitCmd[1]));
+                                //objectOutputStream.writeObject(new PutMessage(splitCmd[1]));
                             }
                         }
                     // without encryption
@@ -134,9 +135,10 @@ public class client {
                                     objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
                                     continue;
                                 } else {
-                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, Crypto.extractBytesFromFile(file));
-                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
-                                    objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
+//                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, Crypto.extractBytesFromFile(file));
+//                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
+//                                    objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
+                                    sendFile(file, objectOutputStream);
                                     System.out.println("sent a put request");
                                 }
                             }
@@ -180,5 +182,84 @@ public class client {
         SecretKey enc = new SecretKeySpec(Arrays.copyOfRange(key, AUTH_SIZE, key.length), AES_SPEC);
         return new Crypto.Keys(enc, auth);
     }
+
+    private static void sendFile(File file, ObjectOutputStream objectOutputStream) throws IOException, NoSuchAlgorithmException {
+
+        long size = file.length();
+        System.out.println("total length " + size);
+        objectOutputStream.writeObject(new PutMessage(file.getName(), size));
+
+        FileInputStream fileInputStream = new FileInputStream(file);
+        byte[] buff = new byte[BUFFER_SIZE];
+        int read;
+        int count = 0;
+        while ((read = fileInputStream.read(buff)) > 0) {
+            System.out.println("read " + read);
+            if(read < BUFFER_SIZE) {
+                System.out.println("less than buffer");
+                break;
+            } else {
+                System.out.println("writing data msg");
+                objectOutputStream.writeObject(new DataMessage(buff, count++));
+            }
+        }
+        System.out.println("out of while loop and read is " + read);
+        byte[] fileBytes = Crypto.extractBytesFromFile(file);
+        byte[] hashBytes = Crypto.generateHash(Crypto.HASHING_ALGORITHM, fileBytes);
+        if(read > 0) {
+            objectOutputStream.writeObject(new TransferCompleteMessage(hashBytes, Arrays.copyOf(buff, read)));
+        } else {
+            System.out.println("null final bytes");
+            objectOutputStream.writeObject(new TransferCompleteMessage(hashBytes, null));
+        }
+        System.out.println("wrote transfer complete ");
+
+    }
+
+    /*
+    private static void encryptFile(int keySize, char[] pass, InputStream inputStream, OutputStream outputStream, long fileSize)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, InvalidParameterSpecException,
+                    IOException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException {
+
+        // Send server the size in bytes of the encrypted file to be read
+        byte[] bytes = ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(fileSize + PAD_SIZE).array();
+        outputStream.write(bytes);
+
+        // Generate salt and keys (for authentication and encryption)
+        byte[] salt = generateRandomSalt(crypto.SALT_SIZE);
+        crypto.Keys secret = crypto.generateKeysFromPassword(keySize, pass, salt);
+
+        Cipher encrCipher;
+
+        // Initialize AES cipher
+        encrCipher = Cipher.getInstance(CIPHER_SPEC);
+        encrCipher.init(Cipher.ENCRYPT_MODE, secret.encr);
+
+        // Generate initialization vector
+        byte[] iv = encrCipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV();
+
+        // Send authentication and AES initialization data
+        outputStream.write(salt);
+        outputStream.write(secret.auth.getEncoded());
+        outputStream.write(iv);
+
+        // Use a buffer to send chunks of encrypted data to server
+        byte[] buff = new byte[BUFF_SIZE];
+        int read;
+        byte[] encr;
+
+        while ((read = inputStream.read(buff)) > 0) {
+            encr = encrCipher.update(buff, 0, read);
+            if(encr != null) {
+                outputStream.write(encr);
+            }
+        }
+        // Final encryption block
+        encr = encrCipher.doFinal();
+        if(encr != null) {
+            outputStream.write(encr);
+        }
+    }
+     */
 
 }

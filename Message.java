@@ -5,7 +5,7 @@ public class Message implements Serializable {
     private static final long serialVersionUID = 42L;
 
     public enum MessageType {
-        STOP, GET, PUT, ERROR
+        STOP, GET, PUT, ERROR, DATA, TRANSFER_COMPLETE
     }
     private MessageType type;
 
