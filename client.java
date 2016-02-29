@@ -96,7 +96,7 @@ public class client {
                                 } else if(message.getType() == Message.MessageType.PUT) {
                                     PutMessage putMessage = (PutMessage) message;
                                     File file = new File(putMessage.getFileName());
-                                    TransferCompleteMessage complete = Crypto.decryptFile(splitCmd[3].toCharArray(),
+                                    TransferCompleteMessage complete = Crypto.decryptFile(splitCmd[3],
                                             objectInputStream, file.getName());
                                     // TODO: can refactor this
                                     byte[] fileBytes = Crypto.extractBytesFromFile(file);

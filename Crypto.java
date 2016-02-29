@@ -182,15 +182,17 @@ public class Crypto {
         return complete;
     }
 
-    public static TransferCompleteMessage decryptFile(char[] password, ObjectInputStream objectInputStream,
+    public static TransferCompleteMessage decryptFile(String password, ObjectInputStream objectInputStream,
                                     String name) throws Exception {
 
-        FileOutputStream fileOutputStream = new FileOutputStream(name);
+        FileOutputStream fileOutputStream = new FileOutputStream(name + "-decrypted");
 
         // Read in salt, keys, and authentication password
         byte[] saltBytes = new byte[Crypto.SALT_SIZE];
+        byte[] hashPwd =  generateHash(HASHING_ALGORITHM, password.getBytes());
+        char[] charHash = new String(hashPwd, "UTF-8").toCharArray();
 
-        Crypto.Keys keys = Crypto.generateKeysFromPassword(AES_KEY_LENGTH, password, saltBytes);
+        Crypto.Keys keys = Crypto.generateKeysFromPassword(AES_KEY_LENGTH, charHash, saltBytes);
 
         DataMessage dataMessage = (DataMessage) objectInputStream.readObject();
         byte[] data = dataMessage.getData();
@@ -214,7 +216,7 @@ public class Crypto {
         while((msg = (Message) objectInputStream.readObject()).getType() == Message.MessageType.DATA) {
             dataMessage = (DataMessage) msg;
             decrypt = decrpytCipher.update(dataMessage.getData(), 0, dataMessage.getData().length);
-
+            System.out.println("decrypted: " + decrypt.length);
             if(decrypt != null) {
                 fileOutputStream.write(decrypt);
             }
