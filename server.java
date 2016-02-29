@@ -118,7 +118,7 @@ public class server {
         // Check for existence of requested file and its hash
         try {
             if (!file.exists() || !file.canRead() || !hash.exists() || !hash.canRead()) {
-                System.out.println("server file access error.");
+                System.out.println("Server file access error.");
                 objectOutputStream.writeObject(new ErrorMessage(new Crypto.SendException()));
             } else {
                 // Send the file to the client
@@ -131,7 +131,6 @@ public class server {
                 throw new Crypto.SendException();
             }
         }
-        System.out.println("writing get to client.");
     }
 
     private static void handleWriteFile(Message cmd, ObjectInputStream objectInputStream, ObjectOutputStream objectOutputStream)
@@ -154,6 +153,5 @@ public class server {
             }
 
         }
-        System.out.println("wrote hash");
     }
 }

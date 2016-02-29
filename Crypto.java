@@ -59,9 +59,7 @@ public class Crypto {
             InvalidKeyException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException {
 
         long size = file.length();
-        System.out.println("total length " + size);
-
-        objectOutputStream.writeObject(new PutMessage(file.getName(), size));
+        objectOutputStream.writeObject(new PutMessage(file.getName()));
         FileInputStream fileInputStream = new FileInputStream(file);
 
         byte[] buff = new byte[BUFFER_SIZE];
@@ -82,7 +80,6 @@ public class Crypto {
 
             // Generate initialization vector
             byte[] iv = encrCipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV();
-            System.out.println("iv size" + iv.length);
 
             objectOutputStream.writeObject(new DataMessage(iv));
             objectOutputStream.reset();
@@ -90,7 +87,6 @@ public class Crypto {
             byte[] encr;
 
             while ((read = fileInputStream.read(buff)) >= 0) {
-                System.out.println("encr read " + read);
                 encr = encrCipher.update(buff, 0, read);
                 if(encr != null) {
                     DataMessage dm = new DataMessage(encr);
@@ -108,14 +104,10 @@ public class Crypto {
 
         } else {
             while ((read = fileInputStream.read(buff)) >= 0) {
-                System.out.println("read " + read);
 
                 if(read < BUFFER_SIZE) {
-                    System.out.println("less than buffer");
                     break;
                 } else {
-                    System.out.println("writing data msg");
-                    System.out.println(buff[0]);
                     DataMessage dm = new DataMessage(buff);
                     objectOutputStream.writeObject(dm);
                     objectOutputStream.reset();
@@ -137,51 +129,30 @@ public class Crypto {
         if(read > 0) {
             objectOutputStream.writeObject(new TransferCompleteMessage(hashBytes, Arrays.copyOf(buff, read)));
         } else {
-            System.out.println("null final bytes");
             objectOutputStream.writeObject(new TransferCompleteMessage(hashBytes, null));
         }
-        System.out.println("wrote transfer complete ");
-
     }
 
     public static TransferCompleteMessage consumeFile(ObjectInputStream objectInputStream, FileOutputStream fileOutputStream)
             throws IOException, ClassNotFoundException {
 
-        System.out.println("put message recvd");
-
         Message msg = (Message) objectInputStream.readObject();
-
         while(msg.getType() == Message.MessageType.DATA) {
-            System.out.println("while msg type " + msg.getType());
-            System.out.println("data recvd ");
 
             DataMessage dataMessage = (DataMessage) msg;
             byte[] dataChunk = dataMessage.getData();
-            System.out.println("data number " + dataMessage.number);
-            System.out.println("wrote " + dataChunk.length);
             fileOutputStream.write(dataChunk);
-            //fileOutputStream.flush();
-
             msg = (Message) objectInputStream.readObject();
         }
-        System.out.println("msg type " + msg.getType());
         TransferCompleteMessage complete = null;
         byte[] finalBytes = null;
         if(msg.getType() == Message.MessageType.TRANSFER_COMPLETE) {
-            System.out.println("if transfer complete");
             complete = (TransferCompleteMessage) msg;
             finalBytes = complete.getFinalData();
         }
-
-        System.out.println("transfer complete");
-
         if(finalBytes != null) {
-            System.out.println("final bytes length " + finalBytes.length);
-            System.out.println("writing final bytes");
             fileOutputStream.write(finalBytes);
         }
-        System.out.println("wrote file");
-
         fileOutputStream.close();
         return complete;
     }
@@ -204,8 +175,6 @@ public class Crypto {
         byte[] iv = Arrays.copyOfRange(data, 0, 16);
         byte[] rest = Arrays.copyOfRange(data, 16, data.length);
 
-        System.out.println("decryption received iv of size : " + iv.length);
-
         Cipher decrpytCipher = Cipher.getInstance(Crypto.CIPHER_SPEC);
         decrpytCipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(iv));
 
@@ -221,12 +190,10 @@ public class Crypto {
         while((msg = (Message) objectInputStream.readObject()).getType() == Message.MessageType.DATA) {
             dataMessage = (DataMessage) msg;
             decrypt = decrpytCipher.update(dataMessage.getData(), 0, dataMessage.getData().length);
-            System.out.println("decrypted: " + decrypt.length);
             fileOutputStream.write(decrypt);
 
         }
         fileOutputStream.flush();
-        System.out.println("out of data block");
         TransferCompleteMessage transferCompleteMessage = (TransferCompleteMessage) msg;
 
         byte[] finalData = transferCompleteMessage.getFinalData();
@@ -236,16 +203,13 @@ public class Crypto {
         }
         fileOutputStream.flush();
 
-
         // Decrypt final block
-        // TODO: catch bad padding exception here - wrong key, encryption failed? (unencrypted?)
         decrypt = decrpytCipher.doFinal();
         if(decrypt != null) {
             fileOutputStream.write(decrypt);
         }
         fileOutputStream.flush();
         fileOutputStream.close();
-        System.out.println("closed file output stream");
         return transferCompleteMessage;
     }
 

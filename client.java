@@ -45,8 +45,6 @@ public class client {
         String trustStore = Crypto.validateCertFileName(args[4]);
         String trustStorePassword = args[5];
 
-        //System.setProperty("javax.net.debug", "all");
-
         // Set up system properties needed for mutual authentication
         System.setProperty("javax.net.ssl.keyStore", keyStore);
         System.setProperty("javax.net.ssl.keyStorePassword", keyStorePassword); // TODO: better password?
@@ -83,7 +81,7 @@ public class client {
                         System.out.println("Failed to remove corrupted file.");
                     }
                 } else {
-                    System.out.println("they matched.");
+                    System.out.println("Hashes matched. File written to disk.");
                 }
             }
         } catch(Exception e) {
@@ -104,7 +102,6 @@ public class client {
                 objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
             } else {
                 Crypto.sendFile(file, objectOutputStream, splitCmd[3], true);
-                System.out.println("sent a put request");
             }
         } catch(Exception e) {
             throw new Crypto.SendException();
@@ -127,9 +124,9 @@ public class client {
                 byte[] serverHash = complete.getHash();
 
                 if(!Arrays.equals(clientHash, serverHash)) {
-                    System.out.println("Calculated hash did not match hash server sent.");
+                    System.out.println("Verification failed. Calculated hash did not match hash server sent.");
                 } else {
-                    System.out.println("they matched.");
+                    System.out.println("Verification passed. File written to disk.");
                 }
             } else {
                 System.out.println("Did not understand message from server.");
@@ -154,7 +151,6 @@ public class client {
                 objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
             } else {
                 Crypto.sendFile(file, objectOutputStream, null, true);
-                System.out.println("sent a put request");
             }
         } catch(Exception e) {
             try {
@@ -176,7 +172,6 @@ public class client {
             System.out.println("Missing parameters for request with encryption.");
             System.out.println("Filename, \"E\" or \"N\", and password required.");
         } else {
-            System.out.println("pwd bytes : " + splitCmd[3].getBytes().length);
             if (splitCmd[3].getBytes().length != PASSWORD_LENGTH) {
                 System.out.println("Password must be 8 bytes long.");
             } else if (splitCmd[0].equals("get")) {
@@ -222,6 +217,12 @@ public class client {
                     System.out.println(e.getMessage());
                 } catch(Crypto.ConnectionException e) {
                     System.out.println(e.getMessage());
+                    try {
+                        objectInputStream.close();
+                        objectOutputStream.close();
+                    } catch(IOException e1) {
+                        System.out.println("Unexpected error. Exiting...");
+                    }
                     System.exit(1);
                 }
             } else {
@@ -255,9 +256,6 @@ public class client {
             System.out.print("> ");
             String userCmd = input.nextLine();
             String[] splitCmd = userCmd.split(" ");
-            for(String s : splitCmd) {
-                System.out.println("cmd" + s);
-            }
 
             if(splitCmd.length == 0) {
                 System.out.println("Please enter a command.");
