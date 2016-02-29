@@ -5,6 +5,8 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
@@ -280,6 +282,47 @@ public class Crypto {
         SecretKey enc = new SecretKeySpec(Arrays.copyOfRange(key, AUTH_SIZE, key.length), AES_SPEC);
         return new Keys(enc, auth);
     }
+
+    public static String validateCertFileName(String input) {
+        if(!input.endsWith(".jks")) {
+            System.out.println("Invalid certificate file. Expected .jks extension.");
+            System.exit(1);
+        }
+        File validate = new File(input);
+        if(!validate.canRead()) {
+            System.out.println("Cannot read from file: " + input);
+            System.exit(1);
+        }
+        return input;
+    }
+
+    public static InetAddress validateIP(String input) {
+        InetAddress address = null;
+        try {
+            // Check if host exists
+            address = InetAddress.getByName(input);
+        } catch (UnknownHostException e) {
+            System.out.println("Could not find IP address/host name: " + input);
+            System.exit(1);
+        }
+        return address;
+    }
+
+    public static int validatePort(String input) {
+        int port = 0;
+        try {
+            port = Integer.parseInt(input);
+        } catch(NumberFormatException e) {
+            System.out.println("Port must be an integer");
+            System.exit(1);
+        }
+        if(port > 65536) {
+            System.out.println("Port value out of range. Must be <= 6535");
+            System.exit(1);
+        }
+        return port;
+    }
+
     // TODO: do we even need both keys?
     // Class to store pair of encryption and authentication keys
     public static class Keys {

@@ -13,20 +13,33 @@ import java.net.Socket;
 public class server {
 
     private static final String HASH_EXTENSION = ".sha256";
+    private static final int NUM_ARGS = 5;
 
     public static void main(String[] args)  {
 
+        // Validate command line arguments
+        if(args.length != NUM_ARGS) {
+            System.out.println("Incorrect number of arguments.");
+            System.out.println("Usage: java server <port> <keyStore> <keyStorePassword> <trustStore> <trustStorePassword>");
+            System.exit(1);
+        }
+
+        int port = Crypto.validatePort(args[0]);
+        String keyStore = Crypto.validateCertFileName(args[1]);
+        String keyStorePassword = args[2];
+        String trustStore = Crypto.validateCertFileName(args[3]);
+        String trustStorePassword = args[4];
+
         //System.setProperty("javax.net.debug", "all");
 
-        // TODO: figure out if its okay to have client.jks here - trust store? accepted certificates?
-        System.setProperty("javax.net.ssl.trustStore", "client.jks");
-        System.setProperty("javax.net.ssl.trustStorePassword", "password"); // TODO: better password?
-        System.setProperty("javax.net.ssl.keyStore", "server.jks");
-        System.setProperty("javax.net.ssl.keyStorePassword" , "password");
+        System.setProperty("javax.net.ssl.trustStore", trustStore);
+        System.setProperty("javax.net.ssl.trustStorePassword", trustStorePassword);
+        System.setProperty("javax.net.ssl.keyStore", keyStore);
+        System.setProperty("javax.net.ssl.keyStorePassword" , keyStorePassword);
 
         try {
             ServerSocketFactory sslFactory = SSLServerSocketFactory.getDefault();
-            ServerSocket listenSocket = sslFactory.createServerSocket(1234);
+            ServerSocket listenSocket = sslFactory.createServerSocket(port);
             ((SSLServerSocket)listenSocket).setNeedClientAuth(true);
 
             Socket connection = null;
@@ -55,10 +68,6 @@ public class server {
                         } else {
                             Crypto.sendFile(file, objectOutputStream, null, false);
                             System.out.println("writing get to client.");
-
-//                            byte[] fileBytes = Crypto.extractBytesFromFile(file);
-//                            byte[] hashBytes = Crypto.extractBytesFromFile(hash);
-//                            objectOutputStream.writeObject(new GetMessage(fileName, fileBytes, hashBytes));
                         }
                     } else if (cmd.getType() == Message.MessageType.PUT) {
 
@@ -73,8 +82,6 @@ public class server {
 
                     }
                 }
-
-                //}
                 objectInputStream.close();
                 objectOutputStream.close();
                 connection.close();
@@ -84,6 +91,4 @@ public class server {
             e.printStackTrace();
         }
     }
-
-
 }

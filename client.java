@@ -1,19 +1,11 @@
 
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.KeySpec;
+import java.net.UnknownHostException;
 import java.util.Arrays;
-import java.util.Random;
 import java.util.Scanner;
 
 /**
@@ -24,30 +16,43 @@ import java.util.Scanner;
 
 public class client {
 
-    public static final String AES_SPEC = "AES";
-    public static final String KEY_GENERATION_SPEC = "PBKDF2WithHmacSHA1";
-
-    public static final int AUTH_SIZE = 8;
-    public static final int AUTH_ITERATIONS = 32768;
     private static final int PASSWORD_LENGTH = 8;
+    private static final int NUM_ARGS = 6;
 
     public static void main(String[] args) throws Exception {
 
+        // Validate command line arguments
+        if(args.length != NUM_ARGS) {
+            System.out.println("Incorrect number of arguments.");
+            System.out.println("Usage: java client <host> <port> <keyStore> <keyStorePassword> <trustStorePassword> <trustStore>");
+            System.exit(1);
+        }
+        InetAddress host = Crypto.validateIP(args[0]);
+        int port = Crypto.validatePort(args[1]);
+        String keyStore = Crypto.validateCertFileName(args[2]);
+        String keyStorePassword = args[3];
+        String trustStore = Crypto.validateCertFileName(args[4]);
+        String trustStorePassword = args[5];
+
         //System.setProperty("javax.net.debug", "all");
 
-        System.setProperty("javax.net.ssl.keyStore", "client.jks");
-        System.setProperty("javax.net.ssl.keyStorePassword", "password"); // TODO: better password?
-        System.setProperty("javax.net.ssl.trustStore", "server.jks");
-        System.setProperty("javax.net.ssl.trustStorePassword", "password");
+        // Set up system properties needed for mutual authentication
+        System.setProperty("javax.net.ssl.keyStore", keyStore);
+        System.setProperty("javax.net.ssl.keyStorePassword", keyStorePassword); // TODO: better password?
+        System.setProperty("javax.net.ssl.trustStore", trustStore);
+        System.setProperty("javax.net.ssl.trustStorePassword", trustStorePassword);
 
+        // Create SSL sockets and streams
         SocketFactory sslFactory = SSLSocketFactory.getDefault();
-        Socket connection = sslFactory.createSocket(InetAddress.getByName(args[0]), 1234);
+        Socket connection = sslFactory.createSocket(host, port);
         OutputStream out = connection.getOutputStream();
         InputStream in = connection.getInputStream();
 
+        // Create object streams for sending/reading Message objects
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(connection.getOutputStream());
         ObjectInputStream objectInputStream = new ObjectInputStream(connection.getInputStream());
 
+        // Read in user commands until stop is requested
         Scanner input = new Scanner(System.in);
         while(true) {
             System.out.print("> ");
@@ -99,8 +104,6 @@ public class client {
                                     TransferCompleteMessage complete = Crypto.decryptFile(splitCmd[3],
                                             objectInputStream, file.getName());
                                     // TODO: can refactor this
-
-
                                     byte[] clientHash = Crypto.generateFileHash(Crypto.HASHING_ALGORITHM, file);
                                     byte[] serverHash = complete.getHash();
 
@@ -120,9 +123,6 @@ public class client {
                                     objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
                                     continue;
                                 } else {
-//                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, Crypto.extractBytesFromFile(file));
-//                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
-//                                    objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
                                     Crypto.sendFile(file, objectOutputStream, splitCmd[3], true);
                                     System.out.println("sent a put request");
                                 }
@@ -168,9 +168,6 @@ public class client {
                                     objectOutputStream.writeObject(new ErrorMessage(new PutMessage.PutFileNotFoundException()));
                                     continue;
                                 } else {
-//                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, Crypto.extractBytesFromFile(file));
-//                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
-//                                    objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
                                     Crypto.sendFile(file, objectOutputStream, null, true);
                                     System.out.println("sent a put request");
                                 }
@@ -192,18 +189,4 @@ public class client {
     }
 
 
-    public static Crypto.Keys generateKeysFromPassword(int size, char[] pass, byte[] salt) throws NoSuchAlgorithmException,
-            InvalidKeySpecException {
-
-        // Initialize and generate secret keys from password and pseudorandom salt
-        SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(KEY_GENERATION_SPEC);
-        KeySpec keySpec = new PBEKeySpec(pass, salt, AUTH_ITERATIONS, size + AUTH_SIZE * 8);
-        SecretKey tmpKey = secretKeyFactory.generateSecret(keySpec);
-        byte[] key = tmpKey.getEncoded();
-
-        // Save encryption and authorization keys in crypto.Keys static storage class
-        SecretKey auth = new SecretKeySpec(Arrays.copyOfRange(key, 0, AUTH_SIZE), AES_SPEC);
-        SecretKey enc = new SecretKeySpec(Arrays.copyOfRange(key, AUTH_SIZE, key.length), AES_SPEC);
-        return new Crypto.Keys(enc, auth);
-    }
 }
