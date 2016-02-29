@@ -193,7 +193,10 @@ public class Crypto {
         Crypto.Keys keys = Crypto.generateKeysFromPassword(AES_KEY_LENGTH, password, saltBytes);
 
         DataMessage dataMessage = (DataMessage) objectInputStream.readObject();
-        byte[] iv = dataMessage.getData();
+        byte[] data = dataMessage.getData();
+        byte[] iv = Arrays.copyOfRange(data, 0, 16);
+        byte[] rest = Arrays.copyOfRange(data, 16, data.length);
+
         System.out.println("decryption received iv of size : " + iv.length);
 
         Cipher decrpytCipher = Cipher.getInstance(Crypto.CIPHER_SPEC);
@@ -202,8 +205,10 @@ public class Crypto {
         // Use a buffer to decrypt and write to disk
         byte[] buff = new byte[Crypto.BUFFER_SIZE];
         int read;
-        byte[] decrypt;
-
+        byte[] decrypt = decrpytCipher.update(rest, 0, rest.length);
+        if(decrypt != null) {
+            fileOutputStream.write(decrypt);
+        }
 
         while((dataMessage = (DataMessage) objectInputStream.readObject()).getType() == Message.MessageType.DATA) {
             decrypt = decrpytCipher.update(dataMessage.getData(), 0, dataMessage.getData().length);
