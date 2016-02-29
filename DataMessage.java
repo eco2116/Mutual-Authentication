@@ -1,7 +1,7 @@
 
 public class DataMessage extends Message {
 
-    private final byte[] data;
+    private byte[] data;
     public int number;
 
     public DataMessage(byte[] data, int number) {

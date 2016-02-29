@@ -32,8 +32,9 @@ public class server {
             Socket connection = null;
             while ((connection = listenSocket.accept()) != null) {
                 //while(true) {
-                ObjectInputStream objectInputStream = new ObjectInputStream(connection.getInputStream());
                 ObjectOutputStream objectOutputStream = new ObjectOutputStream(connection.getOutputStream());
+                ObjectInputStream objectInputStream = new ObjectInputStream(connection.getInputStream());
+
                 while(true) {
                     Message cmd = (Message) objectInputStream.readObject();
                     if (cmd.getType() == Message.MessageType.STOP) {
@@ -58,31 +59,17 @@ public class server {
                             objectOutputStream.writeObject(new GetMessage(fileName, fileBytes, hashBytes));
                         }
                     } else if (cmd.getType() == Message.MessageType.PUT) {
-//                    PutMessage putMessage = (PutMessage) cmd;
-//
-//                    String fileName = putMessage.getFileName();
-//
-//                    byte[] fileArray = putMessage.getFileBytes();
-//
-//                    FileOutputStream fileOutputStream = new FileOutputStream(fileName);
-//                    fileOutputStream.write(fileArray);
-//                    fileOutputStream.close();
-//
-//                    // Write hash to disk
-//                    byte[] hash = putMessage.getHashBytes();
-//                    fileOutputStream = new FileOutputStream(fileName + HASH_EXTENSION);
-//                    fileOutputStream.write(hash);
-//                    fileOutputStream.close();
+
                         PutMessage putMessage = (PutMessage) cmd;
                         long size = putMessage.getTotalSize();
                         String fileName = putMessage.getFileName();
-                        FileOutputStream fileOutputStream = new FileOutputStream(fileName);
+                        FileOutputStream fileOutputStream = new FileOutputStream(fileName + "copy");
 
                         System.out.println("put message recvd");
 
-                        Message msg;
+                        Message msg = (Message) objectInputStream.readObject();
 
-                        while((msg = ((Message) objectInputStream.readObject())).getType() == Message.MessageType.DATA) {
+                        while(msg.getType() == Message.MessageType.DATA) {
                             System.out.println("while msg type " + msg.getType());
                             System.out.println("data recvd ");
 
@@ -91,6 +78,9 @@ public class server {
                             System.out.println("data number " + dataMessage.number);
                             System.out.println("wrote " + dataChunk.length);
                             fileOutputStream.write(dataChunk);
+                            fileOutputStream.flush();
+
+                            msg = (Message) objectInputStream.readObject();
                         }
                         System.out.println("msg type " + msg.getType());
                         TransferCompleteMessage complete = null;
@@ -101,14 +91,14 @@ public class server {
 
                         System.out.println("transfer complete");
                         byte[] finalBytes = complete.getFinalData();
-                        System.out.println("final bytes length " + finalBytes.length);
+
                         if(finalBytes != null) {
+                            System.out.println("final bytes length " + finalBytes.length);
                             System.out.println("writing final bytes");
                             fileOutputStream.write(finalBytes);
-                            fileOutputStream.flush();
                         }
                         System.out.println("wrote file");
-                        fileOutputStream.flush();
+
                         fileOutputStream.close();
 
 //                        fileOutputStream = new FileOutputStream(fileName + ".sha256");
@@ -119,8 +109,11 @@ public class server {
                 }
 
                 //}
+                objectInputStream.close();
+                objectOutputStream.close();
                 connection.close();
             }
+
         } catch(Exception e) {
             e.printStackTrace();
         }

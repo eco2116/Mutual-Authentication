@@ -187,20 +187,31 @@ public class client {
 
         long size = file.length();
         System.out.println("total length " + size);
-        objectOutputStream.writeObject(new PutMessage(file.getName(), size));
 
+        objectOutputStream.writeObject(new PutMessage(file.getName(), size));
         FileInputStream fileInputStream = new FileInputStream(file);
+        //BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
+
+        //BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
+
         byte[] buff = new byte[BUFFER_SIZE];
         int read;
+        int total = 0;
         int count = 0;
-        while ((read = fileInputStream.read(buff)) > 0) {
+        while ((read = fileInputStream.read(buff)) >= 0) {
+            total += read;
             System.out.println("read " + read);
+
             if(read < BUFFER_SIZE) {
                 System.out.println("less than buffer");
                 break;
             } else {
                 System.out.println("writing data msg");
-                objectOutputStream.writeObject(new DataMessage(buff, count++));
+                System.out.println(buff[0]);
+                DataMessage dm = new DataMessage(buff, count++);
+                objectOutputStream.writeObject(dm);
+                objectOutputStream.reset();
+                objectOutputStream.flush();
             }
         }
         System.out.println("out of while loop and read is " + read);
@@ -213,7 +224,8 @@ public class client {
             objectOutputStream.writeObject(new TransferCompleteMessage(hashBytes, null));
         }
         System.out.println("wrote transfer complete ");
-
+        //bufferedInputStream.close();
+        fileInputStream.close();
     }
 
     /*
