@@ -210,7 +210,9 @@ public class Crypto {
             fileOutputStream.write(decrypt);
         }
 
-        while((dataMessage = (DataMessage) objectInputStream.readObject()).getType() == Message.MessageType.DATA) {
+        Message msg;
+        while((msg = (Message) objectInputStream.readObject()).getType() == Message.MessageType.DATA) {
+            dataMessage = (DataMessage) msg;
             decrypt = decrpytCipher.update(dataMessage.getData(), 0, dataMessage.getData().length);
 
             if(decrypt != null) {
