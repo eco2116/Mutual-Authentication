@@ -28,9 +28,4 @@ public class GetMessage extends Message {
 
     public byte[] getHashBytes() { return this.hashBytes; }
 
-    public static class GetFileNotFoundException extends Exception {
-        GetFileNotFoundException() {
-            super("Get request failed: Could not access file.");
-        }
-    }
 }

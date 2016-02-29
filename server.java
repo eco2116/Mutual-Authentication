@@ -119,7 +119,7 @@ public class server {
         try {
             if (!file.exists() || !file.canRead() || !hash.exists() || !hash.canRead()) {
                 System.out.println("server file access error.");
-                objectOutputStream.writeObject(new ErrorMessage(new GetMessage.GetFileNotFoundException()));
+                objectOutputStream.writeObject(new ErrorMessage(new Crypto.SendException()));
             } else {
                 // Send the file to the client
                 Crypto.sendFile(file, objectOutputStream, null, false);

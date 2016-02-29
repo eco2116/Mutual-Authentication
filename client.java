@@ -78,8 +78,10 @@ public class client {
                 byte[] serverHash = complete.getHash();
 
                 if(!Arrays.equals(clientHash, serverHash)) {
-                    // TODO: delete file
                     System.out.println("Calculated hash did not match hash server sent.");
+                    if(!file.delete()) {
+                        System.out.println("Failed to remove corrupted file.");
+                    }
                 } else {
                     System.out.println("they matched.");
                 }
@@ -182,7 +184,10 @@ public class client {
                 try {
                     handleGetEncrypted(objectOutputStream, objectInputStream, splitCmd);
                 } catch(Crypto.RetrievalException e) {
-                    // TODO: send error?
+                    File file = new File(splitCmd[1]);
+                    if(!file.delete()) {
+                        System.out.println("Failed to remove corrupted file.");
+                    }
                     System.out.println(e.getMessage());
                 } catch(Crypto.ConnectionException e) {
                     System.out.println(e.getMessage());
@@ -210,6 +215,10 @@ public class client {
                     // Get without encryption
                     handleGetUnencrypted(objectOutputStream, objectInputStream, splitCmd);
                 } catch(Crypto.RetrievalException e) {
+                    File file = new File(splitCmd[1]);
+                    if(!file.delete()) {
+                        System.out.println("Failed to remove corrupted file.");
+                    }
                     System.out.println(e.getMessage());
                 } catch(Crypto.ConnectionException e) {
                     System.out.println(e.getMessage());
