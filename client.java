@@ -105,6 +105,7 @@ public class client {
                                     byte[] serverHash = complete.getHash();
 
                                     if(!Arrays.equals(clientHash, serverHash)) {
+                                        // TODO: delete file
                                         System.out.println("Calculated hash did not match hash server sent.");
                                     } else {
                                         System.out.println("they matched.");

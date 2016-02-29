@@ -55,6 +55,7 @@ public class server {
                         } else {
                             Crypto.sendFile(file, objectOutputStream, null, false);
                             System.out.println("writing get to client.");
+
 //                            byte[] fileBytes = Crypto.extractBytesFromFile(file);
 //                            byte[] hashBytes = Crypto.extractBytesFromFile(hash);
 //                            objectOutputStream.writeObject(new GetMessage(fileName, fileBytes, hashBytes));
