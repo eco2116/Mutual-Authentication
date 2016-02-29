@@ -88,7 +88,29 @@ public class client {
                                 System.out.println("Password must be 8 characters long.");
                                 continue;
                             } else if (splitCmd[0].equals("get")) {
-                                //objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
+                                objectOutputStream.writeObject(new GetMessage(splitCmd[1]));
+                                Message message = (Message) objectInputStream.readObject();
+                                if(message.getType() == Message.MessageType.ERROR) {
+                                    System.out.println(((ErrorMessage) message).getException().getMessage());
+                                    continue;
+                                } else if(message.getType() == Message.MessageType.PUT) {
+                                    PutMessage putMessage = (PutMessage) message;
+                                    File file = new File(putMessage.getFileName());
+                                    TransferCompleteMessage complete = Crypto.decryptFile(splitCmd[3].toCharArray(),
+                                            objectInputStream, file.getName());
+                                    // TODO: can refactor this
+                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
+                                    byte[] clientHash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, fileBytes);
+                                    byte[] serverHash = complete.getHash();
+
+                                    if(!Arrays.equals(clientHash, serverHash)) {
+                                        System.out.println("Calculated hash did not match hash server sent.");
+                                    } else {
+                                        System.out.println("they matched.");
+                                    }
+                                }
+
+
                             } else {
                                 File file = new File(splitCmd[1]);
                                 if(!file.exists() || !file.canRead()) {
@@ -167,15 +189,6 @@ public class client {
         connection.close();
     }
 
-    private static byte[] generateRandomSalt(int size, String password) {
-        Random random = new Random();
-        byte[] saltBytes = new byte[size];
-
-        random.nextBytes(password.getBytes());
-        return saltBytes;
-    }
-
-
 
     public static Crypto.Keys generateKeysFromPassword(int size, char[] pass, byte[] salt) throws NoSuchAlgorithmException,
             InvalidKeySpecException {
@@ -191,51 +204,4 @@ public class client {
         SecretKey enc = new SecretKeySpec(Arrays.copyOfRange(key, AUTH_SIZE, key.length), AES_SPEC);
         return new Crypto.Keys(enc, auth);
     }
-
-    /*
-    private static void encryptFile(int keySize, char[] pass, InputStream inputStream, OutputStream outputStream, long fileSize)
-            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, InvalidParameterSpecException,
-                    IOException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException {
-
-        // Send server the size in bytes of the encrypted file to be read
-        byte[] bytes = ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(fileSize + PAD_SIZE).array();
-        outputStream.write(bytes);
-
-        // Generate salt and keys (for authentication and encryption)
-        byte[] salt = generateRandomSalt(crypto.SALT_SIZE);
-        crypto.Keys secret = crypto.generateKeysFromPassword(keySize, pass, salt);
-
-        Cipher encrCipher;
-
-        // Initialize AES cipher
-        encrCipher = Cipher.getInstance(CIPHER_SPEC);
-        encrCipher.init(Cipher.ENCRYPT_MODE, secret.encr);
-
-        // Generate initialization vector
-        byte[] iv = encrCipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV();
-
-        // Send authentication and AES initialization data
-        outputStream.write(salt);
-        outputStream.write(secret.auth.getEncoded());
-        outputStream.write(iv);
-
-        // Use a buffer to send chunks of encrypted data to server
-        byte[] buff = new byte[BUFF_SIZE];
-        int read;
-        byte[] encr;
-
-        while ((read = inputStream.read(buff)) > 0) {
-            encr = encrCipher.update(buff, 0, read);
-            if(encr != null) {
-                outputStream.write(encr);
-            }
-        }
-        // Final encryption block
-        encr = encrCipher.doFinal();
-        if(encr != null) {
-            outputStream.write(encr);
-        }
-    }
-     */
-
 }

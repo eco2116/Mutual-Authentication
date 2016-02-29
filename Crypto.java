@@ -23,7 +23,7 @@ public class Crypto {
     public static final int SALT_SIZE = 16;
 
     public static final String HASHING_ALGORITHM = "SHA-256";
-    private static final int BUFFER_SIZE = 1024;
+    private static final int BUFFER_SIZE = 128;
 
     public static byte[] generateHash(String type, byte[] bytes) throws NoSuchAlgorithmException, IOException {
 
@@ -87,12 +87,15 @@ public class Crypto {
 
             // Generate initialization vector
             byte[] iv = encrCipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV();
+            System.out.println("iv size" + iv.length);
+
             objectOutputStream.writeObject(new DataMessage(iv));
             objectOutputStream.reset();
 
             byte[] encr;
 
             while ((read = fileInputStream.read(buff)) >= 0) {
+                System.out.println("encr read " + read);
                 encr = encrCipher.update(buff, 0, read);
                 if(encr != null) {
                     DataMessage dm = new DataMessage(encr);
@@ -125,9 +128,6 @@ public class Crypto {
                 }
             }
         }
-        /*
-
-         */
 
         byte[] fileBytes = Crypto.extractBytesFromFile(file);
         byte[] hashBytes = Crypto.generateHash(Crypto.HASHING_ALGORITHM, fileBytes);
@@ -180,6 +180,58 @@ public class Crypto {
 
         fileOutputStream.close();
         return complete;
+    }
+
+    public static TransferCompleteMessage decryptFile(char[] password, ObjectInputStream objectInputStream,
+                                    String name) throws Exception {
+
+        FileOutputStream fileOutputStream = new FileOutputStream(name);
+
+        // Read in salt, keys, and authentication password
+        byte[] saltBytes = new byte[Crypto.SALT_SIZE];
+
+        Crypto.Keys keys = Crypto.generateKeysFromPassword(AES_KEY_LENGTH, password, saltBytes);
+
+        DataMessage dataMessage = (DataMessage) objectInputStream.readObject();
+        byte[] iv = dataMessage.getData();
+        System.out.println("decryption received iv of size : " + iv.length);
+
+        Cipher decrpytCipher = Cipher.getInstance(Crypto.CIPHER_SPEC);
+        decrpytCipher.init(Cipher.DECRYPT_MODE, keys.encr, new IvParameterSpec(iv));
+
+        // Use a buffer to decrypt and write to disk
+        byte[] buff = new byte[Crypto.BUFFER_SIZE];
+        int read;
+        byte[] decrypt;
+
+
+        while((dataMessage = (DataMessage) objectInputStream.readObject()).getType() == Message.MessageType.DATA) {
+            decrypt = decrpytCipher.update(dataMessage.getData(), 0, dataMessage.getData().length);
+
+            if(decrypt != null) {
+                fileOutputStream.write(decrypt);
+            }
+        }
+        fileOutputStream.flush();
+
+        TransferCompleteMessage transferCompleteMessage = (TransferCompleteMessage) objectInputStream.readObject();
+
+        byte[] finalData = transferCompleteMessage.getFinalData();
+        decrypt = decrpytCipher.update(finalData, 0, finalData.length);
+        if(decrypt != null) {
+            fileOutputStream.write(decrypt);
+        }
+        fileOutputStream.flush();
+
+
+        // Decrypt final block
+        decrypt = decrpytCipher.doFinal();
+        if(decrypt != null) {
+            fileOutputStream.write(decrypt);
+        }
+        fileOutputStream.flush();
+        fileOutputStream.close();
+        return transferCompleteMessage;
     }
 
     public static Keys generateKeysFromPassword(int size, char[] pass, byte[] salt) throws NoSuchAlgorithmException,
