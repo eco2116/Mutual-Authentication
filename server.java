@@ -21,7 +21,8 @@ public class server {
             interactWithClient(listenSocket);
         } catch(Crypto.ConnectionException e) {
             System.out.println(e.getMessage());
-            System.exit(1);
+        } catch(Crypto.StopException e) {
+            System.out.println(e.getMessage());
         }
     }
 
@@ -58,7 +59,8 @@ public class server {
         return listenSocket;
     }
 
-    private static void interactWithClient(ServerSocket listenSocket) throws Crypto.ConnectionException {
+    private static void interactWithClient(ServerSocket listenSocket) throws Crypto.ConnectionException,
+            Crypto.StopException {
 
         Socket connection = null;
         ObjectInputStream objectInputStream = null;
@@ -76,7 +78,7 @@ public class server {
                         objectOutputStream.close();
                         connection.close();
                         // TODO: close stuff
-                        throw new Crypto.ConnectionException("Received a stop request from client. Exiting...");
+                        throw new Crypto.StopException();
                     } else if (cmd.getType() == Message.MessageType.GET) {
                         try {
                             handleSendFile(cmd, objectOutputStream);

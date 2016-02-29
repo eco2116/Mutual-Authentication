@@ -320,4 +320,8 @@ public class Crypto {
             super("Failed to send file.");
         }
     }
+
+    public static class StopException extends Exception {
+        public StopException() { super("Stop request received."); }
+    }
 }
