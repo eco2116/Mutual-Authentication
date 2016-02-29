@@ -99,8 +99,9 @@ public class client {
                                     TransferCompleteMessage complete = Crypto.decryptFile(splitCmd[3],
                                             objectInputStream, file.getName());
                                     // TODO: can refactor this
-                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
-                                    byte[] clientHash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, fileBytes);
+
+
+                                    byte[] clientHash = Crypto.generateFileHash(Crypto.HASHING_ALGORITHM, file);
                                     byte[] serverHash = complete.getHash();
 
                                     if(!Arrays.equals(clientHash, serverHash)) {
@@ -121,7 +122,7 @@ public class client {
 //                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, Crypto.extractBytesFromFile(file));
 //                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
 //                                    objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
-                                    Crypto.sendFile(file, objectOutputStream, splitCmd[3]);
+                                    Crypto.sendFile(file, objectOutputStream, splitCmd[3], true);
                                     System.out.println("sent a put request");
                                 }
                             }
@@ -145,8 +146,8 @@ public class client {
                                     TransferCompleteMessage complete = Crypto.consumeFile(objectInputStream,
                                             new FileOutputStream(file));
 
-                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
-                                    byte[] clientHash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, fileBytes);
+
+                                    byte[] clientHash = Crypto.generateFileHash(Crypto.HASHING_ALGORITHM, file);
                                     byte[] serverHash = complete.getHash();
 
                                     if(!Arrays.equals(clientHash, serverHash)) {
@@ -169,7 +170,7 @@ public class client {
 //                                    byte[] hash = Crypto.generateHash(Crypto.HASHING_ALGORITHM, Crypto.extractBytesFromFile(file));
 //                                    byte[] fileBytes = Crypto.extractBytesFromFile(file);
 //                                    objectOutputStream.writeObject(new PutMessage(file.getName(), fileBytes, hash));
-                                    Crypto.sendFile(file, objectOutputStream, null);
+                                    Crypto.sendFile(file, objectOutputStream, null, true);
                                     System.out.println("sent a put request");
                                 }
                             }

@@ -25,43 +25,57 @@ public class Crypto {
     public static final String HASHING_ALGORITHM = "SHA-256";
     private static final int BUFFER_SIZE = 1024;
 
-    public static byte[] generateHash(String type, byte[] bytes) throws NoSuchAlgorithmException, IOException {
+    public static byte[] generateByteArrayHash(String type, byte[] bytes) throws Exception {
+
+        // Initialize message digest for given hashing algorithm and file input stream
+        MessageDigest messageDigest = MessageDigest.getInstance(type);
+        messageDigest.update(bytes, 0, bytes.length);
+        return messageDigest.digest();
+
+    }
+
+    public static byte[] generateFileHash(String type, File file) throws NoSuchAlgorithmException, IOException {
+
+        FileInputStream fileInputStream = new FileInputStream(file);
 
         // Initialize message digest for given hashing algorithm and file input stream
         MessageDigest messageDigest = MessageDigest.getInstance(type);
 
-        // TODO: is this okay? no loop?
-        messageDigest.update(bytes, 0, bytes.length);
+        byte[] buff = new byte[BUFFER_SIZE];
+        int read;
+        while((read = fileInputStream.read(buff)) >= 0) {
+            messageDigest.update(buff, 0, read);
+        }
 
         // Digest hashed bytes
         return messageDigest.digest();
     }
 
-    public static byte[] extractBytesFromFile(File file) throws IOException {
-        InputStream inputStream = new FileInputStream(file);
+//    public static byte[] extractBytesFromFile(File file) throws IOException {
+//        InputStream inputStream = new FileInputStream(file);
+//
+//        long length = file.length();
+//        if(length > Integer.MAX_VALUE) {
+//            // TODO: File is too large - throw put exception
+//        }
+//
+//        byte[] fileBytes = new byte[(int) length];
+//
+//        int offset = 0;
+//        int read = 0;
+//        while(offset < fileBytes.length &&
+//                (read = inputStream.read(fileBytes, offset, fileBytes.length - offset)) >= 0) {
+//            offset += read;
+//        }
+//        if(offset < fileBytes.length) {
+//            // TODO - put exception
+//            throw new IOException("Failed to completely read file " + file.getName());
+//        }
+//        inputStream.close();
+//        return fileBytes;
+//    }
 
-        long length = file.length();
-        if(length > Integer.MAX_VALUE) {
-            // TODO: File is too large - throw put exception
-        }
-
-        byte[] fileBytes = new byte[(int) length];
-
-        int offset = 0;
-        int read = 0;
-        while(offset < fileBytes.length &&
-                (read = inputStream.read(fileBytes, offset, fileBytes.length - offset)) >= 0) {
-            offset += read;
-        }
-        if(offset < fileBytes.length) {
-            // TODO - put exception
-            throw new IOException("Failed to completely read file " + file.getName());
-        }
-        inputStream.close();
-        return fileBytes;
-    }
-
-    public static void sendFile(File file, ObjectOutputStream objectOutputStream, String password) throws Exception {
+    public static void sendFile(File file, ObjectOutputStream objectOutputStream, String password, boolean generateHash) throws Exception {
 
         long size = file.length();
         System.out.println("total length " + size);
@@ -74,7 +88,7 @@ public class Crypto {
 
         if(password != null) {
             byte[] salt = new byte[SALT_SIZE];
-            byte[] hashPwd =  generateHash(HASHING_ALGORITHM, password.getBytes());
+            byte[] hashPwd =  generateByteArrayHash(HASHING_ALGORITHM, password.getBytes());
             char[] charHash = new String(hashPwd, "UTF-8").toCharArray();
 
             Keys secret = generateKeysFromPassword(AES_KEY_LENGTH, charHash, salt);
@@ -128,9 +142,17 @@ public class Crypto {
                 }
             }
         }
+        fileInputStream.close();
+        byte[] hashBytes = null;
+        if(generateHash) {
+            hashBytes = Crypto.generateFileHash(Crypto.HASHING_ALGORITHM, file);
+        } else {
+            fileInputStream = new FileInputStream(file.getName() + ".sha256");
+            hashBytes = new byte[32];
+            fileInputStream.read(hashBytes, 0, 32);
+            fileInputStream.close();
+        }
 
-        byte[] fileBytes = Crypto.extractBytesFromFile(file);
-        byte[] hashBytes = Crypto.generateHash(Crypto.HASHING_ALGORITHM, fileBytes);
         if(read > 0) {
             objectOutputStream.writeObject(new TransferCompleteMessage(hashBytes, Arrays.copyOf(buff, read)));
         } else {
@@ -138,7 +160,7 @@ public class Crypto {
             objectOutputStream.writeObject(new TransferCompleteMessage(hashBytes, null));
         }
         System.out.println("wrote transfer complete ");
-        fileInputStream.close();
+
     }
 
     public static TransferCompleteMessage consumeFile(ObjectInputStream objectInputStream,
@@ -189,7 +211,7 @@ public class Crypto {
 
         // Read in salt, keys, and authentication password
         byte[] saltBytes = new byte[Crypto.SALT_SIZE];
-        byte[] hashPwd =  generateHash(HASHING_ALGORITHM, password.getBytes());
+        byte[] hashPwd =  generateByteArrayHash(HASHING_ALGORITHM, password.getBytes());
         char[] charHash = new String(hashPwd, "UTF-8").toCharArray();
 
         Crypto.Keys keys = Crypto.generateKeysFromPassword(AES_KEY_LENGTH, charHash, saltBytes);
@@ -222,8 +244,8 @@ public class Crypto {
             }
         }
         fileOutputStream.flush();
-
-        TransferCompleteMessage transferCompleteMessage = (TransferCompleteMessage) objectInputStream.readObject();
+        System.out.println("out of data block");
+        TransferCompleteMessage transferCompleteMessage = (TransferCompleteMessage) msg;
 
         byte[] finalData = transferCompleteMessage.getFinalData();
         decrypt = decrpytCipher.update(finalData, 0, finalData.length);
@@ -240,6 +262,7 @@ public class Crypto {
         }
         fileOutputStream.flush();
         fileOutputStream.close();
+        System.out.println("closed file output stream");
         return transferCompleteMessage;
     }
 
