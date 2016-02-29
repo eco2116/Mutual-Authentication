@@ -23,7 +23,7 @@ public class Crypto {
     public static final int SALT_SIZE = 16;
 
     public static final String HASHING_ALGORITHM = "SHA-256";
-    private static final int BUFFER_SIZE = 128;
+    private static final int BUFFER_SIZE = 1024;
 
     public static byte[] generateHash(String type, byte[] bytes) throws NoSuchAlgorithmException, IOException {
 
