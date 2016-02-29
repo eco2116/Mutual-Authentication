@@ -192,7 +192,7 @@ public class Crypto {
             throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, ClassNotFoundException, NoSuchPaddingException,
                 InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
 
-        FileOutputStream fileOutputStream = new FileOutputStream(name + "-decrypted");
+        FileOutputStream fileOutputStream = new FileOutputStream(name);
 
         // Read in salt, keys, and authentication password
         byte[] saltBytes = new byte[Crypto.SALT_SIZE];
