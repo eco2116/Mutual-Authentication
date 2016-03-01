@@ -1,4 +1,9 @@
-
+/**
+ * Evan O'Connor (eco2116)
+ * ErrorMessage.java
+ *
+ * ErrorMessage is an application layer message to notify client/server of internal errors encountered during interaction
+ */
 public class ErrorMessage extends Message {
 
     private final Exception exception;

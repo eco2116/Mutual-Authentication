@@ -18,12 +18,14 @@ import java.util.Arrays;
  * Evan O'Connor (eco2116)
  * Crypto.java
  *
- * Crypto is a helper class with methods related to sending/receiving data, encryption/decryption, and hashing
+ * Crypto is a helper class with methods and custom exceptions related to sending/receiving data,
+ * encryption/decryption, and hashing plaintext files
  */
 public class Crypto {
     public static final String AES_SPEC = "AES";
     public static final String KEY_GENERATION_SPEC = "PBKDF2WithHmacSHA1";
     public static final String HASHING_ALGORITHM = "SHA-256";
+    public static final String SHA_EXTENSION = ".sha256";
 
     public static final int AUTH_SIZE = 8;
     public static final int AUTH_ITERATIONS = 32768;
@@ -32,7 +34,6 @@ public class Crypto {
     private static final String CIPHER_SPEC = "AES/CBC/PKCS5Padding";
     private static final String ENCODING_TYPE = "UTF-8";
     private static final String CERTIFICATE_EXTENSION = ".jks";
-    private static final String SHA_EXTENSION = ".sha256";
 
     private static final int AES_KEY_LENGTH = 128;
     private static final int MAX_PORT = 65536;

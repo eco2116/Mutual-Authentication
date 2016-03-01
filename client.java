@@ -4,14 +4,14 @@ import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Scanner;
 
 /**
  * Evan O'Connor (eco2116)
- *
  * client.java
+ *
+ * client is class that sends or receives encrypted/decrypted data and generates and/or verifies hashes of plaintext
  */
 
 public class client {

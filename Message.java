@@ -1,5 +1,12 @@
 import java.io.Serializable;
 
+/**
+ * Evan O'Connor (eco2116)
+ * Message.java
+ *
+ * Message is a serializable application layer message parent class to convey from one party to another
+ * what type of interaction is desired by the sender.
+ */
 public class Message implements Serializable {
 
     private static final long serialVersionUID = 42L;
