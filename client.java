@@ -15,7 +15,6 @@ import java.util.Scanner;
  */
 
 public class client {
-// TODO: utf-8 encodable pwd, ascii/binary data, no spaces in file name or pwd
     private static final int PASSWORD_LENGTH = 8;
     private static final int NUM_ARGS = 6;
 
