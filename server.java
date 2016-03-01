@@ -70,18 +70,16 @@ public class server {
         ObjectInputStream objectInputStream = null;
         ObjectOutputStream objectOutputStream = null;
         try {
-            while ((connection = listenSocket.accept()) != null) {
+            while((connection = listenSocket.accept()) != null) {
                 objectOutputStream = new ObjectOutputStream(connection.getOutputStream());
                 objectInputStream = new ObjectInputStream(connection.getInputStream());
 
-                // TODO: switch
-                while (true) {
+                while(true) {
                     Message cmd = (Message) objectInputStream.readObject();
                     if (cmd.getType() == Message.MessageType.STOP) {
                         objectInputStream.close();
                         objectOutputStream.close();
                         connection.close();
-                        // TODO: close stuff
                         throw new Crypto.StopException();
                     } else if (cmd.getType() == Message.MessageType.GET) {
                         try {
