@@ -1,6 +1,5 @@
-Evan O'Connor (eco2116)
-Network Security
-Programming Assignment 2
+Mutual Authentication
+written by Evan O'Connor
 
 RESOURCES:
 
